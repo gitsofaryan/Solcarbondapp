@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Leaf } from 'lucide-react';
+import { useBlockchainStore } from './store/blockchain-store';
 import { MobileHeader } from './components/MobileHeader';
 import { BottomNav } from './components/BottomNav';
 import { MobileDashboard } from './components/MobileDashboard';
