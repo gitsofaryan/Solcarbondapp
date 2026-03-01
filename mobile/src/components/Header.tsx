@@ -1,0 +1,177 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../theme/colors';
+import { useBlockchainStore } from '../store/blockchain-store';
+import { useWalletContext } from '../providers/WalletProvider';
+
+export const Header: React.FC = () => {
+    const { carbonCredits } = useBlockchainStore();
+    const insets = useSafeAreaInsets();
+    const wallet = useWalletContext();
+
+    return (
+        <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
+            {/* Top Row: Logo + Wallet */}
+            <View style={styles.topRow}>
+                <View style={styles.leftSection}>
+                    <View style={styles.logoBg}>
+                        <Ionicons name="leaf" size={16} color={colors.green} />
+                    </View>
+                    <View>
+                        <Text style={styles.appName}>SolCarbon</Text>
+                        <Text style={styles.networkLabel}>Devnet</Text>
+                    </View>
+                </View>
+
+                {wallet.connected ? (
+                    <TouchableOpacity
+                        style={styles.connectedBtn}
+                        onPress={wallet.openDisconnectModal}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.connectedDot} />
+                        <Text style={styles.connectedText}>
+                            {wallet.walletAddress!.slice(0, 4)}..{wallet.walletAddress!.slice(-4)}
+                        </Text>
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                        style={styles.connectBtn}
+                        onPress={wallet.openConnectModal}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="wallet-outline" size={14} color="#fff" />
+                        <Text style={styles.connectText}>Connect</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {/* Bottom Row: Balance pills */}
+            <View style={styles.pills}>
+                {wallet.connected && wallet.solBalance !== null && (
+                    <View style={[styles.pill, styles.solPill]}>
+                        <Text style={[styles.pillLabel, { color: '#9945FF' }]}>◎</Text>
+                        <Text style={styles.pillValue}>
+                            {wallet.solBalance.toFixed(4)} SOL
+                        </Text>
+                    </View>
+                )}
+                <View style={[styles.pill, styles.ccPill]}>
+                    <Ionicons name="leaf" size={11} color={colors.green} />
+                    <Text style={styles.pillValue}>{carbonCredits} CC</Text>
+                </View>
+            </View>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        paddingHorizontal: 16,
+        paddingBottom: 10,
+        backgroundColor: colors.background,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        gap: 10,
+    },
+    topRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    leftSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    logoBg: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: colors.greenBg,
+        borderWidth: 1,
+        borderColor: 'rgba(16, 185, 129, 0.25)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    appName: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        letterSpacing: -0.3,
+    },
+    networkLabel: {
+        fontSize: 10,
+        color: '#9945FF',
+        fontWeight: '600',
+    },
+    connectBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 14,
+        backgroundColor: '#9945FF',
+    },
+    connectText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    connectedBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 14,
+        backgroundColor: colors.greenBg,
+        borderWidth: 1,
+        borderColor: 'rgba(16, 185, 129, 0.3)',
+    },
+    connectedDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: colors.green,
+    },
+    connectedText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.green,
+        fontFamily: 'monospace',
+    },
+    pills: {
+        flexDirection: 'row',
+        gap: 6,
+    },
+    pill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 16,
+        borderWidth: 1,
+    },
+    solPill: {
+        backgroundColor: 'rgba(153, 69, 255, 0.1)',
+        borderColor: 'rgba(153, 69, 255, 0.2)',
+    },
+    ccPill: {
+        backgroundColor: colors.greenBg,
+        borderColor: 'rgba(16, 185, 129, 0.2)',
+    },
+    pillLabel: {
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    pillValue: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+});
