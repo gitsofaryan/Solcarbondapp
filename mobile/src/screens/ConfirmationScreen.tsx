@@ -92,7 +92,7 @@ export const ConfirmationScreen: React.FC = () => {
                         amount={amount}
                         date={dateStr}
                         assetId={assetId}
-                        ownerAddress={wallet.publicKey ? wallet.publicKey.toString() : ''}
+                        holderAddress={wallet.publicKey ? wallet.publicKey.toString() : 'SOL-DEV-ADDRESS'}
                     />
                 </Animated.View>
 

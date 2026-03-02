@@ -48,13 +48,36 @@ export const CertificateDetailScreen: React.FC = () => {
 
     const handleShare = async () => {
         try {
-            // Capture the certificate view as an image
-            const uri = await captureRef(viewRef, {
-                format: 'png',
-                quality: 1,
-            });
+            let uri;
+            if (Platform.OS === 'web') {
+                // Web-specific capture logic using html2canvas
+                const html2canvas = require('html2canvas');
+                if (viewRef.current) {
+                    const canvas = await html2canvas(viewRef.current, {
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: colors.background,
+                    });
+                    uri = canvas.toDataURL('image/png');
+                }
+            } else {
+                // Capture the certificate view as an image for Native
+                uri = await captureRef(viewRef, {
+                    format: 'png',
+                    quality: 1,
+                });
+            }
 
-            if (await Sharing.isAvailableAsync()) {
+            if (!uri) throw new Error('Failed to capture certificate');
+
+            if (Platform.OS === 'web') {
+                // On web, sharing usually isn't available via system dialog for blob URIs
+                // We provide a direct download fallback
+                const link = document.createElement('a');
+                link.download = `SolCarbon_Certificate_${cert.projectName.replace(/\s+/g, '_')}_${cert.id}.png`;
+                link.href = uri;
+                link.click();
+            } else if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(uri, {
                     mimeType: 'image/png',
                     dialogTitle: 'Share my SolCarbon Certificate',
@@ -64,7 +87,7 @@ export const CertificateDetailScreen: React.FC = () => {
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to share certificate');
+            Alert.alert('Error', 'Failed to share/save certificate. If you are on Web, ensure third-party cookies are allowed.');
         }
     };
 
@@ -123,7 +146,7 @@ export const CertificateDetailScreen: React.FC = () => {
                         amount={cert.amount}
                         date={new Date(cert.mintDate).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' })}
                         assetId={cert.tokenId}
-                        ownerAddress={wallet.publicKey?.toBase58() || ''}
+                        holderAddress={wallet.publicKey?.toBase58() || 'SOL-DEV-ADDRESS'}
                     />
                 </View>
 
