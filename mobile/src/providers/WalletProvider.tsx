@@ -1,15 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, ReactNode } from 'react';
 import { Platform, Alert } from 'react-native';
-import {
-    Connection,
-    PublicKey,
-    Transaction,
-    SystemProgram,
-    LAMPORTS_PER_SOL,
-    clusterApiUrl,
-} from '@solana/web3.js';
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, clusterApiUrl } from '@solana/web3.js';
 import { WalletModal } from '../components/WalletModal';
 import { DisconnectModal } from '../components/DisconnectModal';
+import { CC_TOKEN_MINT } from '../utils/solana';
+
+const TREASURY_ADDRESS = '4yEfgUdei5xQUrTwDA79vNTD9dPGS713qocD6XbkZcFB';
 
 // MWA imports — only used on native mobile
 let transactMWA: any = null;
@@ -39,8 +35,13 @@ interface WalletContextType {
     disconnect: () => void;
     getBalance: () => Promise<number>;
     refreshBalance: () => Promise<void>;
+    signTransaction: (tx: Transaction) => Promise<Transaction>;
     sendSOL: (toAddress: string, amountSOL: number) => Promise<any>;
     connection: Connection;
+    protocolInfo: {
+        treasury: string;
+        mint: string;
+    };
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
@@ -161,6 +162,34 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return balance / LAMPORTS_PER_SOL;
     }, [publicKey, connection]);
 
+    const signTransaction = useCallback(
+        async (tx: Transaction) => {
+            if (!publicKey) throw new Error('Wallet not connected');
+
+            if (Platform.OS === 'web') {
+                const win = window as any;
+                let provider: any = null;
+
+                if (walletName === 'phantom') provider = win.phantom?.solana ?? win.solana;
+                else if (walletName === 'solflare') provider = win.solflare;
+                else if (walletName === 'backpack') provider = win.backpack;
+                else provider = win.solana;
+
+                if (!provider) throw new Error(`${walletName || 'Wallet'} provider not found`);
+                return await provider.signTransaction(tx);
+            } else {
+                if (!transactMWA) throw new Error('MWA not available');
+                return await transactMWA(async (wallet: any) => {
+                    await wallet.authorize({ chain: 'solana:devnet', identity: APP_IDENTITY });
+                    const signed = await wallet.signTransactions({ transactions: [tx] });
+                    // MWA returns the transaction in the same format/Buffer, we need to re-parse or return
+                    return Transaction.from(Buffer.from(signed[0]));
+                });
+            }
+        },
+        [publicKey]
+    );
+
     const sendSOL = useCallback(
         async (toAddress: string, amountSOL: number) => {
             if (!publicKey) throw new Error('Wallet not connected');
@@ -177,24 +206,15 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 tx.recentBlockhash = blockhash;
                 tx.feePayer = publicKey;
 
-                if (Platform.OS === 'web') {
-                    const solana = (window as any).phantom?.solana ?? (window as any).solana;
-                    const signed = await solana.signTransaction(tx);
-                    const sig = await connection.sendRawTransaction(signed.serialize());
-                    await connection.confirmTransaction(sig, 'confirmed');
-                    return sig;
-                } else {
-                    return await transactMWA(async (wallet: any) => {
-                        await wallet.authorize({ chain: 'solana:devnet', identity: APP_IDENTITY });
-                        const sigs = await wallet.signAndSendTransactions({ transactions: [tx] });
-                        return sigs[0];
-                    });
-                }
+                const signed = await signTransaction(tx);
+                const sig = await connection.sendRawTransaction(signed.serialize());
+                await connection.confirmTransaction(sig, 'confirmed');
+                return sig;
             } finally {
                 setSending(false);
             }
         },
-        [publicKey, connection]
+        [publicKey, connection, signTransaction]
     );
 
     // ── Auto-fetch SOL balance on connect & every 30s ──
@@ -231,9 +251,14 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         disconnect,
         getBalance,
         refreshBalance,
+        signTransaction,
         sendSOL,
         connection,
-    }), [publicKey, connecting, sending, walletName, solBalance, openConnectModal, openDisconnectModal, disconnect, getBalance, refreshBalance, sendSOL, connection]);
+        protocolInfo: {
+            treasury: TREASURY_ADDRESS,
+            mint: CC_TOKEN_MINT,
+        },
+    }), [publicKey, connecting, sending, walletName, solBalance, openConnectModal, openDisconnectModal, disconnect, getBalance, refreshBalance, signTransaction, sendSOL, connection]);
 
     return (
         <WalletContext.Provider value={value}>

@@ -13,6 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { mockProjects } from '../data/mock-projects';
 import { solToUsd } from '../utils/price';
+import { useWalletContext } from '../providers/WalletProvider';
+import { ProtocolInfoModal } from '../components/ProtocolInfoModal';
 
 const { width } = Dimensions.get('window');
 
@@ -49,7 +51,9 @@ const Sparkline: React.FC<{ data: number[]; positive: boolean; width?: number; h
 
 export const MarketplaceScreen: React.FC = () => {
     const navigation = useNavigation<any>();
+    const wallet = useWalletContext();
     const [sortBy, setSortBy] = useState<'price' | 'change' | 'volume'>('change');
+    const [protocolVisible, setProtocolVisible] = useState(false);
 
     const sortedProjects = [...mockProjects].sort((a, b) => {
         if (sortBy === 'price') return b.pricePerCC - a.pricePerCC;
@@ -61,11 +65,18 @@ export const MarketplaceScreen: React.FC = () => {
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Title Row */}
-                <View style={styles.titleRow}>
+                <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.title}>Carbon Markets</Text>
                         <Text style={styles.subtitle}>{mockProjects.length} verified projects</Text>
                     </View>
+                    <TouchableOpacity
+                        style={styles.protocolBtn}
+                        onPress={() => setProtocolVisible(true)}
+                    >
+                        <Ionicons name="code-working" size={18} color={colors.blue} />
+                        <Text style={styles.protocolText}>Protocol</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Sort Tabs */}
@@ -141,15 +152,45 @@ export const MarketplaceScreen: React.FC = () => {
 
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            <ProtocolInfoModal
+                visible={protocolVisible}
+                onClose={() => setProtocolVisible(false)}
+                treasuryAddress={wallet.protocolInfo.treasury}
+                mintAddress={wallet.protocolInfo.mint}
+            />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    titleRow: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-    title: { fontSize: 24, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 },
-    subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingRight: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+    },
+    title: { fontSize: 24, fontWeight: '800', color: colors.textPrimary, paddingLeft: 16, letterSpacing: -0.5 },
+    subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2, paddingLeft: 16 },
+    protocolBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        backgroundColor: colors.blueBg,
+        borderWidth: 1,
+        borderColor: colors.blue + '30',
+    },
+    protocolText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.blue,
+    },
     sortRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 16 },
     sortTab: {
         paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,

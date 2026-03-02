@@ -9,13 +9,16 @@ import {
     ActivityIndicator,
     Alert,
     Dimensions,
+    Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { useBlockchainStore, CarbonProject } from '../store/blockchain-store';
 import { mockProjects } from '../data/mock-projects';
 import { solToUsd } from '../utils/price';
+import { useWalletContext } from '../providers/WalletProvider';
 
 const { width } = Dimensions.get('window');
 const CHART_W = width - 32;
@@ -78,7 +81,9 @@ interface ProjectDetailScreenProps {
 }
 
 export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projectId, onBack }) => {
+    const navigation = useNavigation<any>();
     const { buyCredits, sellCredits, carbonCredits, isLoading } = useBlockchainStore();
+    const wallet = useWalletContext();
     const [buyAmount, setBuyAmount] = useState(10);
     const [activeRange, setActiveRange] = useState<typeof timeRanges[number]>('1W');
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
@@ -101,32 +106,62 @@ export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projec
     const totalCostSOL = buyAmount * project.pricePerCC;
 
     const handleBuy = async () => {
+        if (!wallet.connected) {
+            wallet.openConnectModal();
+            return;
+        }
+
         try {
-            const sig = await buyCredits(buyAmount, project.pricePerCC, project.name, project.id, project.image);
-            Alert.alert(
-                '✅ Purchase Complete!',
-                `Bought ${buyAmount} CC from ${project.name}\nNFT Certificate minted!\n\nSig: ${sig.substring(0, 24)}...`,
+            const result = await buyCredits(
+                buyAmount,
+                project.pricePerCC,
+                project.name,
+                project.id,
+                project.image,
+                wallet.publicKey?.toBase58(),
+                wallet.signTransaction
             );
+
+            // Navigate to the new Confirmation screen
+            navigation.navigate('Confirmation', {
+                amount: buyAmount,
+                projectName: project.name,
+                totalCostSOL: totalCostSOL,
+                assetId: result?.assetId || 'PENDING MINT',
+                signature: result?.signature || ''
+            });
+
             setBuyAmount(10);
+            wallet.refreshBalance();
         } catch (err: any) {
-            Alert.alert('Error', err.message);
+            Alert.alert('Error', err.message || 'Purchase failed');
         }
     };
 
     const handleSell = async () => {
+        if (!wallet.connected) {
+            wallet.openConnectModal();
+            return;
+        }
         if (buyAmount > carbonCredits) {
             Alert.alert('Insufficient Credits', `You only have ${carbonCredits} CC.`);
             return;
         }
         try {
-            const sig = await sellCredits(buyAmount, project.pricePerCC);
+            const sig = await sellCredits(
+                buyAmount,
+                project.pricePerCC,
+                wallet.publicKey?.toBase58(),
+                wallet.signTransaction
+            );
             Alert.alert(
                 '✅ Credits Sold!',
                 `Sold ${buyAmount} CC at ◎ ${project.pricePerCC}/CC\n\nSig: ${sig.substring(0, 24)}...`,
             );
             setBuyAmount(10);
+            wallet.refreshBalance();
         } catch (err: any) {
-            Alert.alert('Error', err.message);
+            Alert.alert('Error', err.message || 'Sale failed');
         }
     };
 
@@ -395,8 +430,16 @@ const styles = StyleSheet.create({
         backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20,
         padding: 16, paddingBottom: 24,
         borderTopWidth: 1, borderTopColor: colors.border,
-        shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.3, shadowRadius: 12,
-        elevation: 10,
+        ...Platform.select({
+            web: { boxShadow: '0 -4px 12px rgba(0,0,0,0.3)' },
+            default: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 12,
+                elevation: 10,
+            }
+        })
     },
     toggleRow: {
         flexDirection: 'row', gap: 6, marginBottom: 10,

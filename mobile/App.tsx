@@ -9,6 +9,7 @@ import { TabNavigator } from './src/navigation/TabNavigator';
 import { ProjectDetailScreen } from './src/screens/ProjectDetailScreen';
 import { ListProjectScreen } from './src/screens/ListProjectScreen';
 import { SellProjectScreen } from './src/screens/SellProjectScreen';
+import { ConfirmationScreen } from './src/screens/ConfirmationScreen';
 import { CertificateDetailScreen } from './src/screens/CertificateDetailScreen';
 import { WalletProvider } from './src/providers/WalletProvider';
 import { colors } from './src/theme/colors';
@@ -62,6 +63,11 @@ export default function App() {
               name="CertificateDetail"
               component={CertificateDetailScreen}
               options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Confirmation"
+              component={ConfirmationScreen}
+              options={{ animation: 'fade' }} // Fade works well for success screens
             />
           </Stack.Navigator>
         </NavigationContainer>

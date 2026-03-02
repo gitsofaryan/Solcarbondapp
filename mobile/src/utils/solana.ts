@@ -1,6 +1,5 @@
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { mplCore } from '@metaplex-foundation/mpl-core';
-import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
 import { clusterApiUrl } from '@solana/web3.js';
 
 // Initialize Umi for Devnet
@@ -12,7 +11,7 @@ export const getUmi = () => {
 
 // Hardcoded for Devnet (you would generate this once and save it)
 // We will generate a real one in the next step and paste it here
-export const CC_TOKEN_MINT = 'TBD';
+export const CC_TOKEN_MINT = 'HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa';
 
 // Mock IPFS URIs for NFT metadata since we aren't uploading real files yet
 export const MOCK_NFT_URIS = {

@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/colors';
 import { useBlockchainStore, NFTCertificate } from '../store/blockchain-store';
 import { useWalletContext } from '../providers/WalletProvider';
+import { ProtocolInfoModal } from '../components/ProtocolInfoModal';
 
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - 48 - 12) / 2;
@@ -23,14 +24,25 @@ export const PortfolioScreen: React.FC = () => {
     const { carbonCredits, nftCertificates, transactions } = useBlockchainStore();
     const wallet = useWalletContext();
     const navigation = useNavigation<any>();
+    const [protocolVisible, setProtocolVisible] = useState(false);
 
 
     return (
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.title}>Your Portfolio</Text>
-                <Text style={styles.subtitle}>NFT Carbon certificates</Text>
-
+                <View style={styles.headerRow}>
+                    <View>
+                        <Text style={styles.title}>Your Portfolio</Text>
+                        <Text style={styles.subtitle}>NFT Carbon certificates</Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.protocolBtn}
+                        onPress={() => setProtocolVisible(true)}
+                    >
+                        <Ionicons name="code-working" size={18} color={colors.blue} />
+                        <Text style={styles.protocolText}>Protocol</Text>
+                    </TouchableOpacity>
+                </View>
                 {/* Summary */}
                 <View style={styles.summaryRow}>
                     <LinearGradient
@@ -118,6 +130,13 @@ export const PortfolioScreen: React.FC = () => {
 
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            <ProtocolInfoModal
+                visible={protocolVisible}
+                onClose={() => setProtocolVisible(false)}
+                treasuryAddress={wallet.protocolInfo.treasury}
+                mintAddress={wallet.protocolInfo.mint}
+            />
         </View>
     );
 };
@@ -126,6 +145,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingRight: 16,
     },
     title: {
         fontSize: 24,
@@ -141,6 +166,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         marginTop: 4,
         marginBottom: 16,
+    },
+    protocolBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        backgroundColor: colors.blueBg,
+        borderWidth: 1,
+        borderColor: colors.blue + '30',
+        marginTop: 10,
+    },
+    protocolText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.blue,
     },
     summaryRow: {
         flexDirection: 'row',

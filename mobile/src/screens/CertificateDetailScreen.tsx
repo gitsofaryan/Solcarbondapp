@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -7,6 +7,7 @@ import {
     Image,
     Dimensions,
     Alert,
+    Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -16,6 +17,9 @@ import * as FileSystem from 'expo-file-system';
 import { captureRef } from 'react-native-view-shot';
 import { colors } from '../theme/colors';
 import { useBlockchainStore } from '../store/blockchain-store';
+import { useWalletContext } from '../providers/WalletProvider';
+import { ProtocolInfoModal } from '../components/ProtocolInfoModal';
+import { DynamicCertificate } from '../components/DynamicCertificate';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +29,8 @@ export const CertificateDetailScreen: React.FC = () => {
     const { id } = route.params;
 
     const { nftCertificates, retireCredits } = useBlockchainStore();
+    const wallet = useWalletContext();
+    const [protocolVisible, setProtocolVisible] = useState(false);
     const cert = nftCertificates.find(c => c.id === id);
 
     const viewRef = useRef(null);
@@ -72,10 +78,18 @@ export const CertificateDetailScreen: React.FC = () => {
                     text: 'Burn & Retire',
                     style: 'destructive',
                     onPress: async () => {
-                        const sig = await retireCredits(cert.id);
-                        Alert.alert('✅ Credits Retired', `You have officially offset ${cert.amount} tons of CO2.\n\nSig: ${sig.substring(0, 16)}...`, [
-                            { text: 'Done', onPress: () => navigation.goBack() }
-                        ]);
+                        try {
+                            const sig = await retireCredits(
+                                cert.id,
+                                wallet.publicKey?.toBase58(),
+                                wallet.signTransaction
+                            );
+                            Alert.alert('✅ Credits Retired', `You have officially offset ${cert.amount} tons of CO2.\n\nSig: ${sig.substring(0, 16)}...`, [
+                                { text: 'Done', onPress: () => navigation.goBack() }
+                            ]);
+                        } catch (error: any) {
+                            Alert.alert('Error', error.message || 'Failed to retire credits');
+                        }
                     }
                 }
             ]
@@ -90,52 +104,27 @@ export const CertificateDetailScreen: React.FC = () => {
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>NFT Certificate</Text>
-                <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
-                    <Ionicons name="share-outline" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity onPress={() => setProtocolVisible(true)} style={styles.headerBtn}>
+                        <Ionicons name="code-working" size={22} color={colors.blue} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
+                        <Ionicons name="share-outline" size={24} color={colors.textPrimary} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.content}>
 
                 {/* The View to be captured as an image for sharing */}
                 <View style={styles.certificateWrapper} ref={viewRef} collapsable={false}>
-                    <View style={styles.certCard}>
-                        <Image source={{ uri: cert.uri }} style={styles.certImageFull} />
-
-                        <View style={styles.certHeader}>
-                            <View style={styles.verifiedBadge}>
-                                <Ionicons name="shield-checkmark" size={14} color={colors.green} />
-                                <Text style={styles.verifiedText}>Verified On-Chain</Text>
-                            </View>
-                            <MaterialCommunityIcons name="integrated-circuit-chip" size={24} color={colors.border} />
-                        </View>
-
-                        <View style={styles.certBody}>
-                            <Text style={styles.certTitle}>Carbon Offset Certificate</Text>
-                            <Text style={styles.certProject}>{cert.projectName}</Text>
-
-                            <View style={styles.certStats}>
-                                <View style={styles.certStat}>
-                                    <Text style={styles.certStatLabel}>Amount</Text>
-                                    <Text style={styles.certStatValue}>{cert.amount} CC</Text>
-                                </View>
-                                <View style={styles.certStat}>
-                                    <Text style={styles.certStatLabel}>Network</Text>
-                                    <Text style={styles.certStatValue}>Solana</Text>
-                                </View>
-                                <View style={styles.certStat}>
-                                    <Text style={styles.certStatLabel}>Asset ID</Text>
-                                    <Text style={styles.certStatValue}>{cert.id.substring(0, 12)}...</Text>
-                                </View>
-                            </View>
-
-                            {/* Footer of the generated image */}
-                            <View style={styles.certFooter}>
-                                <Text style={styles.certFooterText}>SolCarbon Eco-dApp</Text>
-                                <View style={styles.barcodeLine} />
-                            </View>
-                        </View>
-                    </View>
+                    <DynamicCertificate
+                        projectName={cert.projectName}
+                        amount={cert.amount}
+                        date={new Date(cert.mintDate).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' })}
+                        assetId={cert.tokenId}
+                        ownerAddress={wallet.publicKey?.toBase58() || ''}
+                    />
                 </View>
 
                 <Text style={styles.instruction}>
@@ -153,6 +142,12 @@ export const CertificateDetailScreen: React.FC = () => {
                     </LinearGradient>
                 </TouchableOpacity>
             </View>
+            <ProtocolInfoModal
+                visible={protocolVisible}
+                onClose={() => setProtocolVisible(false)}
+                treasuryAddress={wallet.protocolInfo.treasury}
+                mintAddress={wallet.protocolInfo.mint}
+            />
         </View>
     );
 };
@@ -185,43 +180,18 @@ const styles = StyleSheet.create({
         width: '100%',
         aspectRatio: 0.75, // Standard certificate ratio
         marginBottom: 24,
-        shadowColor: colors.green,
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 10,
+        ...Platform.select({
+            web: { boxShadow: `0 10px 20px ${colors.green}26` },
+            default: {
+                shadowColor: colors.green,
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.15,
+                shadowRadius: 20,
+                elevation: 10,
+            }
+        })
     },
-    certCard: {
-        flex: 1,
-        backgroundColor: colors.card,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: colors.border,
-        overflow: 'hidden',
-    },
-    certImageFull: {
-        width: '100%', height: '40%', opacity: 0.9,
-    },
-    certHeader: {
-        position: 'absolute', top: 16, left: 16, right: 16,
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    },
-    verifiedBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 6,
-        borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    },
-    verifiedText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-    certBody: { flex: 1, padding: 24, justifyContent: 'space-between' },
-    certTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-    certProject: { color: colors.textPrimary, fontSize: 24, fontWeight: '800', marginTop: 4, letterSpacing: -0.5 },
-    certStats: { gap: 12, marginTop: 24 },
-    certStat: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 8 },
-    certStatLabel: { color: colors.textSecondary, fontSize: 13 },
-    certStatValue: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
-    certFooter: { alignItems: 'center', marginTop: 20 },
-    certFooterText: { color: colors.textMuted, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 },
-    barcodeLine: { width: '80%', height: 2, backgroundColor: colors.border },
+    // Certificate styles moved to DynamicCertificate.tsx
 
     instruction: {
         color: colors.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 22, paddingHorizontal: 10,
