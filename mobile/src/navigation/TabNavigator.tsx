@@ -7,6 +7,7 @@ import { DashboardScreen } from '../screens/DashboardScreen';
 import { MarketplaceScreen } from '../screens/MarketplaceScreen';
 import { PortfolioScreen } from '../screens/PortfolioScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
+import { ToolsScreen } from '../screens/ToolsScreen';
 import { Header } from '../components/Header';
 import { colors } from '../theme/colors';
 
@@ -17,6 +18,7 @@ const tabIcons: Record<string, { active: string; inactive: string }> = {
     Market: { active: 'storefront', inactive: 'storefront-outline' },
     Portfolio: { active: 'wallet', inactive: 'wallet-outline' },
     History: { active: 'time', inactive: 'time-outline' },
+    Tools: { active: 'construct', inactive: 'construct-outline' },
 };
 
 const ScreenWithHeader = ({ children }: { children: React.ReactNode }) => (
@@ -82,6 +84,13 @@ export const TabNavigator: React.FC = () => {
                 {() => (
                     <ScreenWithHeader>
                         <HistoryScreen />
+                    </ScreenWithHeader>
+                )}
+            </Tab.Screen>
+            <Tab.Screen name="Tools">
+                {() => (
+                    <ScreenWithHeader>
+                        <ToolsScreen />
                     </ScreenWithHeader>
                 )}
             </Tab.Screen>

@@ -7,6 +7,8 @@ import {
     TouchableOpacity,
     Image,
     Modal,
+    Alert,
+    ActivityIndicator,
     Dimensions,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -20,12 +22,44 @@ import { ProtocolInfoModal } from '../components/ProtocolInfoModal';
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - 48 - 12) / 2;
 
+const RETIRE_PURPOSES = [
+    { id: 'esg', label: 'ESG / BRSR Compliance', icon: 'shield-checkmark', color: colors.blue },
+    { id: 'personal', label: 'Personal Carbon Neutral', icon: 'leaf', color: colors.green },
+    { id: 'supply', label: 'Supply Chain Offset', icon: 'git-network', color: '#a78bfa' },
+    { id: 'gift', label: 'Climate Gift', icon: 'gift', color: colors.amber },
+];
+
 export const PortfolioScreen: React.FC = () => {
-    const { carbonCredits, nftCertificates, transactions } = useBlockchainStore();
+    const { carbonCredits, nftCertificates, transactions, retireCredits, isLoading } = useBlockchainStore();
     const wallet = useWalletContext();
     const navigation = useNavigation<any>();
     const [protocolVisible, setProtocolVisible] = useState(false);
+    const [retireTarget, setRetireTarget] = useState<NFTCertificate | null>(null);
+    const [selectedPurpose, setSelectedPurpose] = useState<string | null>(null);
+    const [retiring, setRetiring] = useState(false);
+    const retiredCount = transactions.filter(t => t.type === 'retire').length;
 
+    const handleRetire = async () => {
+        if (!retireTarget || !selectedPurpose) return;
+        setRetiring(true);
+        try {
+            const sig = await retireCredits(
+                retireTarget.id,
+                wallet.connected ? wallet.publicKey ?? undefined : undefined,
+                wallet.connected ? wallet.signTransaction : undefined,
+            );
+            setRetireTarget(null);
+            setSelectedPurpose(null);
+            Alert.alert(
+                '🔥 Credits Retired',
+                `${retireTarget.amount} CC from "${retireTarget.projectName}" permanently burned on-chain.\n\nSig: ${sig.slice(0, 12)}...`,
+            );
+        } catch (e: any) {
+            Alert.alert('Retirement Failed', e.message);
+        } finally {
+            setRetiring(false);
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -72,15 +106,13 @@ export const PortfolioScreen: React.FC = () => {
                         <Text style={styles.summaryLabelDark}>NFTs</Text>
                     </View>
 
-                    {wallet.connected && wallet.solBalance !== null && (
-                        <View style={styles.summaryCardDark}>
-                            <Ionicons name="wallet" size={20} color="#9945FF" />
-                            <Text style={[styles.summaryValue, { color: '#9945FF' }]}>
-                                {wallet.solBalance.toFixed(2)}
-                            </Text>
-                            <Text style={styles.summaryLabelDark}>SOL</Text>
-                        </View>
-                    )}
+                    <View style={styles.summaryCardDark}>
+                        <MaterialCommunityIcons name="fire" size={20} color={colors.red} />
+                        <Text style={[styles.summaryValue, { color: colors.red }]}>
+                            {retiredCount}
+                        </Text>
+                        <Text style={styles.summaryLabelDark}>Retired</Text>
+                    </View>
                 </View>
 
                 {/* Certificates Grid */}
@@ -99,31 +131,33 @@ export const PortfolioScreen: React.FC = () => {
                 ) : (
                     <View style={styles.grid}>
                         {nftCertificates.map((nft) => (
-                            <TouchableOpacity
-                                key={nft.id}
-                                style={styles.nftCard}
-                                onPress={() => navigation.navigate('CertificateDetail', { id: nft.id })}
-                                activeOpacity={0.85}
-                            >
-                                <Image
-                                    source={{ uri: nft.uri }}
-                                    style={styles.nftImage}
-                                />
-                                <LinearGradient
-                                    colors={['transparent', 'rgba(0,0,0,0.85)']}
-                                    style={styles.nftGradient}
-                                />
-                                <View style={styles.nftBadge}>
-                                    <Ionicons name="shield-checkmark" size={10} color={colors.green} />
-                                    <Text style={styles.nftBadgeText}>NFT</Text>
-                                </View>
-                                <View style={styles.nftContent}>
-                                    <Text style={styles.nftTitle} numberOfLines={1}>
-                                        {nft.projectName}
-                                    </Text>
-                                    <Text style={styles.nftAmount}>{nft.amount} CC</Text>
-                                </View>
-                            </TouchableOpacity>
+                            <View key={nft.id} style={styles.nftCardWrap}>
+                                <TouchableOpacity
+                                    style={styles.nftCard}
+                                    onPress={() => navigation.navigate('CertificateDetail', { id: nft.id })}
+                                    activeOpacity={0.85}
+                                >
+                                    <Image source={{ uri: nft.uri }} style={styles.nftImage} />
+                                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.nftGradient} />
+                                    <View style={styles.nftBadge}>
+                                        <Ionicons name="shield-checkmark" size={10} color={colors.green} />
+                                        <Text style={styles.nftBadgeText}>NFT</Text>
+                                    </View>
+                                    <View style={styles.nftContent}>
+                                        <Text style={styles.nftTitle} numberOfLines={1}>{nft.projectName}</Text>
+                                        <Text style={styles.nftAmount}>{nft.amount} CC</Text>
+                                    </View>
+                                </TouchableOpacity>
+                                {/* Retire Button */}
+                                <TouchableOpacity
+                                    style={styles.retireBtn}
+                                    activeOpacity={0.85}
+                                    onPress={() => { setRetireTarget(nft); setSelectedPurpose(null); }}
+                                >
+                                    <Ionicons name="flame" size={13} color={colors.red} />
+                                    <Text style={styles.retireBtnText}>Retire</Text>
+                                </TouchableOpacity>
+                            </View>
                         ))}
                     </View>
                 )}
@@ -137,6 +171,63 @@ export const PortfolioScreen: React.FC = () => {
                 treasuryAddress={wallet.protocolInfo.treasury}
                 mintAddress={wallet.protocolInfo.mint}
             />
+
+            {/* ── Retire Modal ─────────────────────────────────────────── */}
+            <Modal visible={!!retireTarget} transparent animationType="slide" onRequestClose={() => setRetireTarget(null)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalSheet}>
+                        <View style={styles.modalHandle} />
+                        <ScrollView contentContainerStyle={styles.modalContent}>
+                            {/* Flame Header */}
+                            <LinearGradient colors={['#3b0a0a', '#1a0404']} style={styles.retireHeader}>
+                                <Text style={styles.retireFlame}>🔥</Text>
+                                <Text style={styles.retireHeaderTitle}>Retire Carbon Credits</Text>
+                                <Text style={styles.retireHeaderSub}>
+                                    {'Permanently burn '}{retireTarget?.amount}{' CC from "'}{retireTarget?.projectName}{'" on-chain.\nThis action is irreversible and creates a verifiable offset proof.'}
+                                </Text>
+                            </LinearGradient>
+
+                            {/* Purpose Selection */}
+                            <Text style={styles.purposeLabel}>Why are you retiring?</Text>
+                            {RETIRE_PURPOSES.map(p => (
+                                <TouchableOpacity
+                                    key={p.id}
+                                    style={[styles.purposeOption, selectedPurpose === p.id && { borderColor: p.color, backgroundColor: p.color + '10' }]}
+                                    onPress={() => setSelectedPurpose(p.id)}
+                                    activeOpacity={0.85}
+                                >
+                                    <Ionicons name={p.icon as any} size={20} color={selectedPurpose === p.id ? p.color : colors.textMuted} />
+                                    <Text style={[styles.purposeText, selectedPurpose === p.id && { color: p.color }]}>{p.label}</Text>
+                                    {selectedPurpose === p.id && <Ionicons name="checkmark-circle" size={18} color={p.color} />}
+                                </TouchableOpacity>
+                            ))}
+
+                            {/* Warning */}
+                            <View style={styles.retireWarning}>
+                                <Ionicons name="warning" size={16} color={colors.amber} />
+                                <Text style={styles.retireWarningText}>Once retired, these credits cannot be sold or transferred. A retirement certificate will be recorded in your transaction history.</Text>
+                            </View>
+
+                            {/* Confirm */}
+                            <TouchableOpacity
+                                style={[styles.retireConfirmBtn, (!selectedPurpose || retiring) && styles.nextBtnDisabled]}
+                                disabled={!selectedPurpose || retiring}
+                                onPress={handleRetire}
+                                activeOpacity={0.85}
+                            >
+                                {retiring
+                                    ? <ActivityIndicator size="small" color="#fff" />
+                                    : <><Ionicons name="flame" size={18} color="#fff" /><Text style={styles.retireConfirmText}>Confirm Retirement</Text></>
+                                }
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setRetireTarget(null)}>
+                                <Text style={styles.cancelBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -249,14 +340,34 @@ const styles = StyleSheet.create({
         gap: 12,
         paddingHorizontal: 16,
     },
-    nftCard: {
+    nftCardWrap: {
         width: CARD_SIZE,
+        gap: 6,
+    },
+    nftCard: {
+        width: '100%',
         height: CARD_SIZE * 1.2,
         borderRadius: 16,
         overflow: 'hidden',
         backgroundColor: colors.card,
         borderWidth: 1,
         borderColor: colors.border,
+    },
+    retireBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 5,
+        paddingVertical: 7,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.red + '40',
+        backgroundColor: colors.redBg,
+    },
+    retireBtnText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.red,
     },
     nftImage: {
         width: '100%',
@@ -396,4 +507,20 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.blue,
     },
+
+    // ── Retire Modal Styles ──────────────────────────────────────────────────
+    retireHeader: { borderRadius: 16, padding: 20, alignItems: 'center', gap: 6, marginBottom: 20 },
+    retireFlame: { fontSize: 40, marginBottom: 4 },
+    retireHeaderTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
+    retireHeaderSub: { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19 },
+    purposeLabel: { fontSize: 12, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
+    purposeOption: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
+    purposeText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+    retireWarning: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.amber + '30', marginVertical: 14 },
+    retireWarningText: { flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+    retireConfirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.red, borderRadius: 14, paddingVertical: 14, marginBottom: 10 },
+    retireConfirmText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+    cancelBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+    cancelBtnText: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
+    nextBtnDisabled: { opacity: 0.4 },
 });
