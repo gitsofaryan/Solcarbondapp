@@ -2,7 +2,7 @@
 
 **On-chain carbon credit exchange built on Solana — tokenize, trade, and retire verified carbon credits as a mobile-first dApp.**
 
-> Built for the [100xMobile Bootcamp](https://www.solanamobile.com/) / Monolith Hackathon
+> Built for the [Monolith Hackathon](https://align.nexus/organizations/8b216ce8-dd0e-4f96-85a1-0d95ba3022e2/hackathons/6unDGXkWmY1Yw99SsKMt6pPCQTpSSQh5kSiJRgqTwHXE)
 
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF?logo=solana&logoColor=white)](https://explorer.solana.com/address/CUmu7iSDj5RavATJnm2Xsrvkgo7iqAb7MeT3GVsgmg7o?cluster=devnet)
 [![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react&logoColor=white)](https://reactnative.dev)
