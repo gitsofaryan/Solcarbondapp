@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { mockProjects } from '../data/mock-projects';
 
 export interface CarbonProject {
   id: string;
@@ -49,12 +50,14 @@ interface BlockchainState {
   transactions: Transaction[];
   nftCertificates: NFTCertificate[];
   userProfile: UserProfile;
-  isLoading: boolean;
-  
+  isBuying: boolean;
+  isSelling: boolean;
+  projects: CarbonProject[];
+
   // Actions
   buyCredits: (amount: number, pricePerCC: number, projectName: string, projectId: string, projectImage: string) => Promise<string>;
   sellCredits: (amount: number, pricePerCC: number) => Promise<string>;
-  autoFillDeficit: (projects: CarbonProject[]) => Promise<string>;
+  autoFillDeficit: () => Promise<string>;
 }
 
 // Mock transaction signature generator
@@ -68,7 +71,7 @@ const generateSignature = () => {
 };
 
 // Simulate blockchain delay
-const simulateBlockchainDelay = () => 
+const simulateBlockchainDelay = () =>
   new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
 
 export const useBlockchainStore = create<BlockchainState>((set, get) => ({
@@ -77,31 +80,40 @@ export const useBlockchainStore = create<BlockchainState>((set, get) => ({
   complianceTarget: 100,
   transactions: [],
   nftCertificates: [],
+  projects: mockProjects.map(p => ({ ...p })), // mutable copy
   userProfile: {
     name: 'GreenTech Industries',
     type: 'company',
     walletAddress: '7xK9...mP2v',
     joinDate: new Date('2025-01-15'),
   },
-  isLoading: false,
+  isBuying: false,
+  isSelling: false,
 
   buyCredits: async (amount: number, pricePerCC: number, projectName: string, projectId: string, projectImage: string) => {
-    set({ isLoading: true });
+    set({ isBuying: true });
     await simulateBlockchainDelay();
-    
+
     const totalCost = amount * pricePerCC;
     const state = get();
-    
+
     if (state.usdcBalance < totalCost) {
-      set({ isLoading: false });
+      set({ isBuying: false });
       throw new Error('Insufficient USDC balance');
     }
-    
+
+    const project = state.projects.find(p => p.id === projectId);
+    if (!project || project.availableCC < amount) {
+      set({ isBuying: false });
+      throw new Error('Insufficient credits available for this project');
+    }
+
+    const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     const signature = generateSignature();
-    const tokenId = `CC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+    const tokenId = `CC-${uid}`;
+
     const transaction: Transaction = {
-      id: Date.now().toString(),
+      id: uid,
       type: 'buy',
       amount,
       pricePerCC,
@@ -110,9 +122,9 @@ export const useBlockchainStore = create<BlockchainState>((set, get) => ({
       signature,
       status: 'completed',
     };
-    
+
     const nftCert: NFTCertificate = {
-      id: Date.now().toString(),
+      id: `nft-${uid}`,
       projectId,
       projectName,
       amount,
@@ -120,34 +132,41 @@ export const useBlockchainStore = create<BlockchainState>((set, get) => ({
       tokenId,
       image: projectImage,
     };
-    
+
+    // Decrement availableCC for this project
+    const updatedProjects = state.projects.map(p =>
+      p.id === projectId ? { ...p, availableCC: p.availableCC - amount } : p
+    );
+
     set({
       usdcBalance: state.usdcBalance - totalCost,
       carbonCredits: state.carbonCredits + amount,
       transactions: [transaction, ...state.transactions],
       nftCertificates: [nftCert, ...state.nftCertificates],
-      isLoading: false,
+      projects: updatedProjects,
+      isBuying: false,
     });
-    
+
     return signature;
   },
 
   sellCredits: async (amount: number, pricePerCC: number) => {
-    set({ isLoading: true });
+    set({ isSelling: true });
     await simulateBlockchainDelay();
-    
+
     const state = get();
     const surplus = state.carbonCredits - state.complianceTarget;
-    
+
     if (amount > surplus) {
-      set({ isLoading: false });
+      set({ isSelling: false });
       throw new Error('Cannot sell credits needed for compliance');
     }
-    
+
     const totalRevenue = amount * pricePerCC;
+    const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     const signature = generateSignature();
     const transaction: Transaction = {
-      id: Date.now().toString(),
+      id: uid,
       type: 'sell',
       amount,
       pricePerCC,
@@ -156,33 +175,40 @@ export const useBlockchainStore = create<BlockchainState>((set, get) => ({
       signature,
       status: 'completed',
     };
-    
+
     set({
       usdcBalance: state.usdcBalance + totalRevenue,
       carbonCredits: state.carbonCredits - amount,
       transactions: [transaction, ...state.transactions],
-      isLoading: false,
+      isSelling: false,
     });
-    
+
     return signature;
   },
 
-  autoFillDeficit: async (projects: CarbonProject[]) => {
+  autoFillDeficit: async () => {
     const state = get();
     const deficit = state.complianceTarget - state.carbonCredits;
-    
+
     if (deficit <= 0) {
       throw new Error('No deficit to fill');
     }
-    
-    // Find cheapest project with enough credits
-    const sortedProjects = [...projects].sort((a, b) => a.pricePerCC - b.pricePerCC);
-    const selectedProject = sortedProjects.find(p => p.availableCC >= deficit);
-    
+
+    const totalCost = (project: CarbonProject) => project.pricePerCC * deficit;
+
+    // Find cheapest project with enough credits AND enough USDC
+    const sortedProjects = [...state.projects].sort((a, b) => a.pricePerCC - b.pricePerCC);
+    const selectedProject = sortedProjects.find(
+      p => p.availableCC >= deficit && state.usdcBalance >= totalCost(p)
+    );
+
     if (!selectedProject) {
-      throw new Error('No project has enough credits available');
+      if (sortedProjects.every(p => p.availableCC < deficit)) {
+        throw new Error('No single project has enough credits available');
+      }
+      throw new Error('Insufficient USDC balance to fill deficit');
     }
-    
+
     return get().buyCredits(deficit, selectedProject.pricePerCC, selectedProject.name, selectedProject.id, selectedProject.image);
   },
 }));

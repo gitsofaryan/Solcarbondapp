@@ -56,8 +56,8 @@ export function Portfolio() {
               <div className="flex gap-4 p-4">
                 {/* NFT Image */}
                 <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30">
-                  <img 
-                    src={nft.image} 
+                  <img
+                    src={nft.image}
                     alt={nft.projectName}
                     className="w-full h-full object-cover opacity-80"
                   />
@@ -80,7 +80,11 @@ export function Portfolio() {
                       <p className="text-[10px] text-gray-400">Amount</p>
                       <p className="text-lg font-bold text-emerald-400">{nft.amount} CC</p>
                     </div>
-                    <button className="text-emerald-400 hover:text-emerald-300 p-2 hover:bg-emerald-500/10 rounded-lg transition-colors">
+                    <button
+                      className="text-emerald-400 hover:text-emerald-300 p-2 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                      onClick={(e) => { e.stopPropagation(); window.open(`https://explorer.solana.com/address/${nft.tokenId}?cluster=devnet`, '_blank'); }}
+                      title="View on Solana Explorer"
+                    >
                       <ExternalLink className="w-4 h-4" />
                     </button>
                   </div>
@@ -106,13 +110,13 @@ export function Portfolio() {
               <div className="flex-1 overflow-y-auto space-y-4">
                 {/* NFT Display */}
                 <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border-2 border-emerald-500/30 aspect-square">
-                  <img 
-                    src={selectedNFT.image} 
+                  <img
+                    src={selectedNFT.image}
                     alt={selectedNFT.projectName}
                     className="w-full h-full object-cover opacity-60"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/50" />
-                  
+
                   {/* NFT Badge */}
                   <div className="absolute top-4 left-4 bg-emerald-500 px-3 py-1.5 rounded-full">
                     <p className="text-xs font-semibold text-white flex items-center gap-1">
@@ -178,10 +182,15 @@ export function Portfolio() {
 
               {/* View on Explorer Button */}
               <div className="pt-4 border-t border-[#2a2a2a]">
-                <button className="w-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white font-semibold h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                <a
+                  href={`https://explorer.solana.com/address/${selectedNFT.tokenId}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white font-semibold h-12 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                >
                   <ExternalLink className="w-4 h-4" />
                   View on Solana Explorer
-                </button>
+                </a>
               </div>
             </div>
           )}

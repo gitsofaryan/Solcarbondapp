@@ -1,22 +1,36 @@
 import { useState } from 'react';
-import { ShoppingCart, MapPin, Star, Info, ChevronDown, ChevronUp, Shield } from 'lucide-react';
+import { ShoppingCart, MapPin, Star, Info, Shield } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { useBlockchainStore } from '../store/blockchain-store';
-import { mockProjects } from '../data/mock-projects';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 
 export function MobileMarketplace() {
-  const { buyCredits, isLoading } = useBlockchainStore();
+  const { buyCredits, isBuying, projects } = useBlockchainStore();
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [purchaseAmount, setPurchaseAmount] = useState<number>(0);
 
-  const project = mockProjects.find(p => p.id === selectedProject);
+  const project = projects.find(p => p.id === selectedProject);
+
+  // Reset amount whenever a different project is opened
+  const openProject = (id: string) => {
+    if (id !== selectedProject) setPurchaseAmount(0);
+    setSelectedProject(id);
+  };
+
+  const closeSheet = () => {
+    setSelectedProject(null);
+    setPurchaseAmount(0);
+  };
 
   const handleBuy = async () => {
     if (!project || purchaseAmount <= 0) {
       toast.error('Please enter a valid amount');
+      return;
+    }
+    if (purchaseAmount > project.availableCC) {
+      toast.error(`Only ${project.availableCC} CC available for this project`);
       return;
     }
 
@@ -31,8 +45,7 @@ export function MobileMarketplace() {
         </div>,
         { id: 'buy', duration: 5000 }
       );
-      setSelectedProject(null);
-      setPurchaseAmount(0);
+      closeSheet();
     } catch (error) {
       toast.error((error as Error).message, { id: 'buy' });
     }
@@ -56,16 +69,17 @@ export function MobileMarketplace() {
 
       {/* Project Cards */}
       <div className="space-y-3">
-        {mockProjects.map((proj) => (
+        {projects.map((proj) => (
           <Card
             key={proj.id}
-            className="bg-[#1a1a1a] border-[#2a2a2a] overflow-hidden active:scale-[0.98] transition-transform"
-            onClick={() => setSelectedProject(proj.id)}
+            className={`bg-[#1a1a1a] border-[#2a2a2a] overflow-hidden transition-transform ${proj.availableCC > 0 ? 'active:scale-[0.98]' : 'opacity-60'
+              }`}
+            onClick={() => proj.availableCC > 0 && openProject(proj.id)}
           >
             {/* Image */}
             <div className="relative h-40">
-              <img 
-                src={proj.image} 
+              <img
+                src={proj.image}
                 alt={proj.name}
                 className="w-full h-full object-cover"
               />
@@ -79,13 +93,18 @@ export function MobileMarketplace() {
                   Verified
                 </div>
               )}
+              {proj.availableCC === 0 && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <span className="bg-red-500/80 text-white text-sm font-bold px-4 py-2 rounded-full">Sold Out</span>
+                </div>
+              )}
               {/* Price Badge */}
               <div className="absolute bottom-2 left-2 bg-emerald-500 px-3 py-1.5 rounded-full">
                 <p className="text-xs text-white/80">Price</p>
                 <p className="text-lg font-bold text-white">${proj.pricePerCC}</p>
               </div>
             </div>
-            
+
             {/* Content */}
             <div className="p-4">
               <div className="flex items-start justify-between mb-2">
@@ -114,13 +133,17 @@ export function MobileMarketplace() {
                 </div>
                 <Button
                   size="sm"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full h-9 px-4"
+                  className={`${proj.availableCC > 0
+                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                    } rounded-full h-9 px-4`}
+                  disabled={proj.availableCC === 0}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedProject(proj.id);
+                    if (proj.availableCC > 0) openProject(proj.id);
                   }}
                 >
-                  Buy Now
+                  {proj.availableCC > 0 ? 'Buy Now' : 'Sold Out'}
                 </Button>
               </div>
             </div>
@@ -129,14 +152,14 @@ export function MobileMarketplace() {
       </div>
 
       {/* Purchase Sheet */}
-      <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
+      <Sheet open={!!selectedProject} onOpenChange={(open) => !open && closeSheet()}>
         <SheetContent side="bottom" className="bg-[#1a1a1a] border-t-2 border-emerald-500/30 text-white h-[85vh] rounded-t-3xl">
           {project && (
             <div className="flex flex-col h-full">
               <SheetHeader className="text-left mb-4">
                 <div className="relative h-48 -mx-6 -mt-6 mb-4 rounded-t-3xl overflow-hidden">
-                  <img 
-                    src={project.image} 
+                  <img
+                    src={project.image}
                     alt={project.name}
                     className="w-full h-full object-cover"
                   />
@@ -235,8 +258,12 @@ export function MobileMarketplace() {
                         key={amount}
                         size="sm"
                         variant="outline"
-                        className="flex-1 bg-[#1a1a1a] border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
-                        onClick={() => setPurchaseAmount(amount)}
+                        disabled={amount > project.availableCC}
+                        className={`flex-1 rounded-lg ${amount > project.availableCC
+                          ? 'bg-[#1a1a1a] border-[#2a2a2a] text-gray-600 cursor-not-allowed'
+                          : 'bg-[#1a1a1a] border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                          }`}
+                        onClick={() => setPurchaseAmount(Math.min(amount, project.availableCC))}
                       >
                         {amount}
                       </Button>
@@ -271,12 +298,12 @@ export function MobileMarketplace() {
               <div className="pt-4 border-t border-[#2a2a2a]">
                 <Button
                   onClick={handleBuy}
-                  disabled={isLoading || purchaseAmount <= 0}
+                  disabled={isBuying || purchaseAmount <= 0}
                   size="lg"
                   className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold h-14 text-base rounded-xl shadow-lg shadow-emerald-500/20"
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  {isLoading ? 'Processing Transaction...' : 'Buy Carbon Credits'}
+                  {isBuying ? 'Processing Transaction...' : 'Buy Carbon Credits'}
                 </Button>
               </div>
             </div>

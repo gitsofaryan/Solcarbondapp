@@ -9,7 +9,7 @@ export function MobileHistory() {
   const { transactions } = useBlockchainStore();
   const [filter, setFilter] = useState<'all' | 'buy' | 'sell'>('all');
 
-  const filteredTxs = transactions.filter(tx => 
+  const filteredTxs = transactions.filter(tx =>
     filter === 'all' ? true : tx.type === filter
   );
 
@@ -47,11 +47,10 @@ export function MobileHistory() {
           size="sm"
           variant="outline"
           onClick={() => setFilter('all')}
-          className={`flex-1 rounded-full ${
-            filter === 'all'
+          className={`flex-1 rounded-full ${filter === 'all'
               ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
               : 'bg-[#1a1a1a] border-[#2a2a2a] text-gray-400 hover:bg-[#2a2a2a]'
-          }`}
+            }`}
         >
           All
         </Button>
@@ -59,11 +58,10 @@ export function MobileHistory() {
           size="sm"
           variant="outline"
           onClick={() => setFilter('buy')}
-          className={`flex-1 rounded-full ${
-            filter === 'buy'
+          className={`flex-1 rounded-full ${filter === 'buy'
               ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
               : 'bg-[#1a1a1a] border-[#2a2a2a] text-gray-400 hover:bg-[#2a2a2a]'
-          }`}
+            }`}
         >
           Purchases
         </Button>
@@ -71,11 +69,10 @@ export function MobileHistory() {
           size="sm"
           variant="outline"
           onClick={() => setFilter('sell')}
-          className={`flex-1 rounded-full ${
-            filter === 'sell'
+          className={`flex-1 rounded-full ${filter === 'sell'
               ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
               : 'bg-[#1a1a1a] border-[#2a2a2a] text-gray-400 hover:bg-[#2a2a2a]'
-          }`}
+            }`}
         >
           Sales
         </Button>
@@ -87,11 +84,10 @@ export function MobileHistory() {
           <Card key={tx.id} className="bg-[#1a1a1a] border-[#2a2a2a] p-4 active:scale-[0.98] transition-transform">
             <div className="flex items-start gap-3">
               {/* Icon */}
-              <div className={`p-2.5 rounded-xl flex-shrink-0 ${
-                tx.type === 'buy' 
-                  ? 'bg-emerald-500/10 text-emerald-400' 
+              <div className={`p-2.5 rounded-xl flex-shrink-0 ${tx.type === 'buy'
+                  ? 'bg-emerald-500/10 text-emerald-400'
                   : 'bg-amber-500/10 text-amber-400'
-              }`}>
+                }`}>
                 {tx.type === 'buy' ? (
                   <ArrowDownRight className="w-5 h-5" />
                 ) : (
@@ -109,9 +105,8 @@ export function MobileHistory() {
                     <p className="text-xs text-gray-400 truncate">{tx.projectName}</p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-base font-bold ${
-                      tx.type === 'buy' ? 'text-red-400' : 'text-emerald-400'
-                    }`}>
+                    <p className={`text-base font-bold ${tx.type === 'buy' ? 'text-red-400' : 'text-emerald-400'
+                      }`}>
                       {tx.type === 'buy' ? '-' : '+'}${(tx.amount * tx.pricePerCC).toFixed(2)}
                     </p>
                     <p className="text-[10px] text-gray-500">USDC</p>
@@ -130,9 +125,15 @@ export function MobileHistory() {
                   <span className="text-[10px] text-gray-500">
                     {format(new Date(tx.timestamp), 'MMM d, yyyy • h:mm a')}
                   </span>
-                  <button className="text-emerald-400 hover:text-emerald-300">
+                  <a
+                    href={`https://explorer.solana.com/tx/${tx.signature}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 hover:text-emerald-300 p-1 rounded"
+                    title="View on Solana Explorer"
+                  >
                     <ExternalLink className="w-3 h-3" />
-                  </button>
+                  </a>
                 </div>
 
                 {/* Signature */}
@@ -146,13 +147,12 @@ export function MobileHistory() {
 
             {/* Status Badge */}
             <div className="flex items-center justify-end mt-2">
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                tx.status === 'completed'
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${tx.status === 'completed'
                   ? 'bg-emerald-500/20 text-emerald-400'
                   : tx.status === 'pending'
-                  ? 'bg-amber-500/20 text-amber-400'
-                  : 'bg-red-500/20 text-red-400'
-              }`}>
+                    ? 'bg-amber-500/20 text-amber-400'
+                    : 'bg-red-500/20 text-red-400'
+                }`}>
                 {tx.status.toUpperCase()}
               </span>
             </div>

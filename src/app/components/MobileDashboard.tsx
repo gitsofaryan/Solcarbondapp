@@ -4,11 +4,10 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Progress } from './ui/progress';
 import { toast } from 'sonner';
-import { mockProjects } from '../data/mock-projects';
 
 export function MobileDashboard() {
-  const { carbonCredits, complianceTarget, autoFillDeficit, isLoading, usdcBalance } = useBlockchainStore();
-  
+  const { carbonCredits, complianceTarget, autoFillDeficit, isBuying, usdcBalance, projects } = useBlockchainStore();
+
   const deficit = complianceTarget - carbonCredits;
   const surplus = carbonCredits > complianceTarget ? carbonCredits - complianceTarget : 0;
   const percentage = (carbonCredits / complianceTarget) * 100;
@@ -17,7 +16,7 @@ export function MobileDashboard() {
   const handleAutoFill = async () => {
     try {
       toast.loading('Connecting to Phantom Wallet...', { id: 'autofill' });
-      const signature = await autoFillDeficit(mockProjects);
+      const signature = await autoFillDeficit();
       toast.success(
         <div className="flex flex-col gap-1">
           <p className="font-semibold">Transaction Confirmed!</p>
@@ -36,7 +35,7 @@ export function MobileDashboard() {
       <Card className="bg-gradient-to-br from-[#1a1a1a] via-[#121212] to-[#0a0a0a] border-[#2a2a2a] p-6 relative overflow-hidden">
         {/* Background Gradient */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl" />
-        
+
         <div className="relative">
           {/* Status Badge */}
           <div className="flex items-center justify-between mb-6">
@@ -72,13 +71,10 @@ export function MobileDashboard() {
                 <p className="text-3xl font-bold text-emerald-400">{percentage.toFixed(0)}%</p>
               </div>
             </div>
-            <Progress 
-              value={percentage} 
+            <Progress
+              value={Math.min(percentage, 100)}
               className="h-4 bg-[#2a2a2a] rounded-full"
-              style={{
-                // @ts-ignore
-                '--progress-background': percentage >= 100 ? '#10b981' : '#f59e0b'
-              }}
+              indicatorColor={percentage >= 100 ? '#10b981' : '#f59e0b'}
             />
           </div>
 
@@ -121,12 +117,12 @@ export function MobileDashboard() {
           {!isCompliant && (
             <Button
               onClick={handleAutoFill}
-              disabled={isLoading}
+              disabled={isBuying}
               size="lg"
               className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-xl h-14 text-base shadow-lg shadow-emerald-500/20"
             >
               <Zap className="w-5 h-5 mr-2" />
-              {isLoading ? 'Processing...' : `Quick Fill Deficit (${deficit} CC)`}
+              {isBuying ? 'Processing...' : `Quick Fill Deficit (${deficit} CC)`}
             </Button>
           )}
         </div>
@@ -167,16 +163,18 @@ export function MobileDashboard() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400">Avg. Market Price</span>
-            <span className="text-sm font-semibold text-emerald-400">$15.20 / CC</span>
+            <span className="text-sm font-semibold text-emerald-400">
+              ${(projects.reduce((sum, p) => sum + p.pricePerCC, 0) / projects.length).toFixed(2)} / CC
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400">Projects Available</span>
-            <span className="text-sm font-semibold text-white">{mockProjects.length}</span>
+            <span className="text-sm font-semibold text-white">{projects.filter(p => p.availableCC > 0).length}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400">Total Supply</span>
             <span className="text-sm font-semibold text-white">
-              {mockProjects.reduce((sum, p) => sum + p.availableCC, 0).toLocaleString()} CC
+              {projects.reduce((sum, p) => sum + p.availableCC, 0).toLocaleString()} CC
             </span>
           </div>
         </div>

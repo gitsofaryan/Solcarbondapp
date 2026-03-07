@@ -8,7 +8,7 @@ import { useBlockchainStore } from '../store/blockchain-store';
 import { toast } from 'sonner';
 
 export function FloatingSellButton() {
-  const { sellCredits, carbonCredits, complianceTarget, isLoading } = useBlockchainStore();
+  const { sellCredits, carbonCredits, complianceTarget, isSelling } = useBlockchainStore();
   const [isOpen, setIsOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [pricePerCC, setPricePerCC] = useState('');
@@ -170,10 +170,10 @@ export function FloatingSellButton() {
               {/* Action Button */}
               <Button
                 onClick={handleSell}
-                disabled={isLoading || !amount || !pricePerCC || parseFloat(amount) <= 0}
+                disabled={isSelling || !amount || !pricePerCC || parseFloat(amount) <= 0}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold h-14 text-base rounded-xl shadow-lg shadow-amber-500/20"
               >
-                {isLoading ? 'Listing...' : 'List Credits on Marketplace'}
+                {isSelling ? 'Listing...' : 'List Credits on Marketplace'}
               </Button>
             </Card>
           </div>
