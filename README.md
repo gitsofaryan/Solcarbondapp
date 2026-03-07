@@ -1,84 +1,203 @@
-# SolCarbon - Solana Carbon Credit Exchange 🌿◎
+# SolCarbon 🌿◎
 
-SolCarbon is a premium, mobile-first decentralized application (dApp) built on the Solana blockchain, designed to facilitate the tokenization, exchange, and retirement of Carbon Credits.
+**On-chain carbon credit exchange built on Solana — tokenize, trade, and retire verified carbon credits as a mobile-first dApp.**
 
-This repository contains the mobile client built with React Native and Expo, deeply integrated with the Solana ecosystem using the Mobile Wallet Adapter (MWA) and Metaplex standards.
+> Built for the [100xMobile Bootcamp](https://www.solanamobile.com/) / Monolith Hackathon
 
----
-
-## 🏗️ Technical Architecture
-
-### 1. Core Frameworks
-*   **React Native & Expo**: Cross-platform mobile framework leveraging Expo SDK 55 for rapid iteration and native module access.
-*   **Solana Web3.js**: Official Solana JavaScript API for interacting with the RPC network (Devnet).
-*   **Zustand**: Scalable state management used to handle complex asynchronous blockchain states (wallet connections, token balances, transaction history).
-
-### 2. Blockchain Integrations
-
-#### Wallet Connectivity
-*   **Mobile Wallet Adapter (MWA)**: Integrates `@solana-mobile/mobile-wallet-adapter-protocol` for native, secure Android/iOS wallet connections (Backpack, Phantom, Solflare).
-
-#### SPL Token Standardization (SOLCC)
-*   **On-Chain Metadata**: Leveraging Metaplex Token Metadata, the SPL Token represents 1 Ton of verified Carbon Credits ("SOLCC").
-*   **Decentralized Storage**: Assets are pinned to **Arweave** via the **Irys SDK**, guaranteeing immutability.
-
-#### Dynamic NFT Certificates
-*   **Metaplex Core**: Upon purchase/retirement, the dApp dynamically mints a Metaplex Core NFT as immutable proof of offset.
-*   **Programmatic Assets**: Real-time transaction data is stamped onto high-end graphical assets during the minting process.
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF?logo=solana&logoColor=white)](https://explorer.solana.com/address/CUmu7iSDj5RavATJnm2Xsrvkgo7iqAb7MeT3GVsgmg7o?cluster=devnet)
+[![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react&logoColor=white)](https://reactnative.dev)
+[![Expo](https://img.shields.io/badge/Expo_SDK-55-000020?logo=expo&logoColor=white)](https://expo.dev)
+[![Anchor](https://img.shields.io/badge/Anchor-0.32-blue)](https://www.anchor-lang.com)
 
 ---
 
-## 🌟 Key Features
+## What is SolCarbon?
 
-### 1. **Compliance Dashboard**
-- **Real-time Carbon Gauge**: Progress tracking against compliance targets.
-- **Deficit/Surplus Alerts**: Dynamic highlights for credit shortfalls or surpluses.
-- **Quick Fill Action**: One-tap auto-purchase to meet compliance.
+SolCarbon brings **voluntary carbon markets on-chain**. Users can browse verified Indian carbon projects (solar, mangrove, wind, bamboo), purchase fractional carbon credits as SPL tokens, receive NFT certificates as proof of offset, and permanently retire credits for ESG/BRSR compliance — all on Solana with zero platform fees.
 
-### 2. **Carbon Marketplace**
-- **Verified Projects**: Detailed listings for Indian carbon projects (Solar, Wind, Reforestation, etc.).
-- **Interactive Purchase Flow**: Bottom sheets with real-time cost calculation and quantity selection.
-
-### 3. **Portfolio & History**
-- **NFT Certificate Grid**: View and manage your unique carbon credit certificates.
-- **Complete Audit Trail**: Filterable transaction history with direct links to Solana Explorer.
+### Why Solana?
+- **Sub-second finality** for real-time carbon trading
+- **< $0.001 transaction fees** making micro-offsets viable
+- **Solana dApp Store** — 150,000+ Seeker devices, 0% platform fees
+- **Mobile Wallet Adapter (MWA)** for native mobile wallet signing
 
 ---
 
-## 🚀 Getting Started
+## Features
+
+### Carbon Marketplace
+- 6 verified Indian carbon projects (Solar, Mangrove, Wind, Bamboo, Biogas, Reforestation)
+- Real-time pricing in SOL with 7-day sparkline charts
+- Registry verification (Gold Standard, Verra VCS, CDM)
+- Interactive buy/sell flows with on-chain settlement
+
+### Portfolio & Certificates
+- NFT certificate grid with animated premium cards
+- Purple/green gradient design matching SolCarbon branding
+- 3-layer animations: shimmer sweep, pulsing glow orbs, rotating border
+- QR codes linking to on-chain proof
+- One-tap retire with purpose selection (ESG, BRSR, Personal, Climate Gift)
+
+### MSME Carbon Tools
+- **Fractional Offset Calculator** — 6 presets (flights, commute, electricity, office, carbon neutral)
+- **MSME Carbon Wizard** — 5-step guided audit with Scope 1/2/3 breakdown
+- **BRSR Report Generator** — SEBI-compliant Section C Principle 6 formatted tables
+- EU CBAM compliance alerts for exporters
+
+### Wallet Integration
+- Phantom, Solflare, Backpack auto-detection
+- Mobile Wallet Adapter (MWA) for native Android
+- SOL + CC + SKR balance display in header
+- Solana Explorer deep links for every transaction
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    React Native / Expo 55                │
+│  ┌──────────┐  ┌───────────┐  ┌──────────────────────┐  │
+│  │ Screens  │  │Components │  │   Providers          │  │
+│  │Dashboard │  │Header     │  │ WalletProvider       │  │
+│  │Market    │  │Certificate│  │  ├─ SOL balance      │  │
+│  │Portfolio │  │ConnectBtn │  │  ├─ CC balance       │  │
+│  │History   │  │Disconnect │  │  └─ SKR balance      │  │
+│  │Tools     │  │Modal      │  │                      │  │
+│  └────┬─────┘  └───────────┘  └──────────┬───────────┘  │
+│       │                                   │              │
+│  ┌────▼───────────────────────────────────▼───────────┐  │
+│  │          Zustand Store (blockchain-store.ts)       │  │
+│  │  buyCredits · sellCredits · retireCredits          │  │
+│  │  sendWithRetry · stampBlockhash · normalizeCCAmount│  │
+│  └────────────────────┬──────────────────────────────┘  │
+│                       │                                  │
+├───────────────────────┼──────────────────────────────────┤
+│   Solana Devnet       │                                  │
+│  ┌────────────────────▼──────────────────────────────┐  │
+│  │  Anchor Program: CUmu7iSD...Mg7o                  │  │
+│  │  ├─ initialize_treasury                           │  │
+│  │  ├─ buy_credits                                   │  │
+│  │  ├─ sell_credits                                  │  │
+│  │  └─ retire_credits                                │  │
+│  ├───────────────────────────────────────────────────┤  │
+│  │  Treasury PDA: EM1yn6t5...MaK4 (mint authority)   │  │
+│  │  CC Token Mint: HVvtKeii...zpAa (2 decimals)     │  │
+│  │  NFT Certificates: Metaplex Core                  │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Mobile Framework | React Native 0.83 + Expo SDK 55 |
+| Language | TypeScript 5.9 |
+| Blockchain | Solana (Devnet) via `@solana/web3.js` 1.98 |
+| Smart Contract | Anchor 0.32 (Rust) |
+| Token Standard | SPL Token (`@solana/spl-token` 0.4) |
+| NFT Standard | Metaplex Core via UMI |
+| State Management | Zustand 5 + AsyncStorage persistence |
+| Wallet | MWA 2.2 + Web wallet adapters |
+| Navigation | React Navigation 7 (tabs + native stack) |
+| Animations | React Native Reanimated 4 + Animated API |
+| Gradients | expo-linear-gradient |
+
+---
+
+## Getting Started
 
 ### Prerequisites
-*   Node.js v18+
-*   Expo CLI (`npm install -g expo-cli`)
-*   Solana Wallet App (Phantom/Backpack) on your device.
+- Node.js v18+
+- A Solana wallet (Phantom, Solflare, or Backpack)
 
-### Installation
+### Install
 ```bash
+git clone https://github.com/gitsofaryan/Solcarbondapp.git
+cd Solcarbondapp
 npm install
 ```
 
-### Running the App
-Start the Expo Metro bundler:
+### Run (Web)
 ```bash
-npm start
+npm run web
 ```
 
-Press `a` to open the Android emulator or scan the QR code using the Expo Go app.
+### Run (Android)
+```bash
+npm run android
+```
+
+### Devnet Scripts
+```bash
+# Check treasury balance, mint existence, RPC reachability
+node scripts/diagnose.mjs
+
+# Full integration test: BUY → SELL → RETIRE
+node scripts/test-trades.mjs
+
+# Initialize treasury PDA and transfer mint authority
+node scripts/init-treasury-pda.mjs
+```
 
 ---
 
-## 🔧 Application Structure
-*   **/src/store/blockchain-store.ts**: Central state and RPC interaction logic.
-*   **/src/screens/**: Main application views (Dashboard, Marketplace, Portfolio, etc.).
-*   **/src/providers/WalletProvider.tsx**: Solana MWA context provider.
-*   **/scripts/**: Utilities for metadata deployment and treasury initialization.
-*   **/contract/**: Anchor-based Rust smart contract program.
+## On-Chain Addresses (Devnet)
+
+| Resource | Address |
+|---|---|
+| Anchor Program | [`CUmu7iSDj5RavATJnm2Xsrvkgo7iqAb7MeT3GVsgmg7o`](https://explorer.solana.com/address/CUmu7iSDj5RavATJnm2Xsrvkgo7iqAb7MeT3GVsgmg7o?cluster=devnet) |
+| Treasury PDA | [`EM1yn6t5cbyQWSeNmQziqRVhgnjPASZEF92MM8sgMaK4`](https://explorer.solana.com/address/EM1yn6t5cbyQWSeNmQziqRVhgnjPASZEF92MM8sgMaK4?cluster=devnet) |
+| CC Token Mint | [`HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa`](https://explorer.solana.com/address/HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa?cluster=devnet) |
 
 ---
 
-## 🔒 Security Notes
-*   **Prototype Environment**: This version utilizes simulated blockchain interactions and a test treasury keypair. In production, logic must be migrated behind secure APIs or fully on-chain programs.
-*   **Network**: strictly bound to **Solana Devnet**.
+## Project Structure
+
+```
+├── contract/                    # Anchor smart contract (Rust)
+│   └── programs/sol-carbon/src/lib.rs
+├── src/
+│   ├── components/              # Reusable UI (Header, Certificate, Modals)
+│   ├── data/                    # IDL (sol_carbon.json), verified projects
+│   ├── hooks/                   # useWallet
+│   ├── navigation/              # Tab navigator
+│   ├── providers/               # WalletProvider (SOL/CC/SKR balances)
+│   ├── screens/                 # Dashboard, Market, Portfolio, History, Tools
+│   ├── store/                   # Zustand blockchain store
+│   ├── theme/                   # Colors, typography
+│   └── utils/                   # Solana helpers, price utils
+├── scripts/                     # Devnet utilities (diagnose, test, init)
+├── assets/                      # Icons, logos, metadata
+├── app.json                     # Expo config
+├── eas.json                     # EAS Build config (APK for dApp Store)
+└── package.json
+```
 
 ---
-*Built for the Future of ReFi (Regenerative Finance) on Solana.*
+
+## Deploying to Solana dApp Store
+
+SolCarbon is configured for the Solana dApp Store (0% platform fees, 150K+ Seeker devices):
+
+```bash
+# Build signed APK (not AAB)
+eas build --profile dappstore --platform android
+
+# Then submit at https://publisher.solanamobile.com
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for full version history.
+
+---
+
+## License
+
+MIT
+
+---
+
+*Built for the future of Regenerative Finance (ReFi) on Solana.* 🌍

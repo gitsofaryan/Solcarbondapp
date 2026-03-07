@@ -1,0 +1,189 @@
+{
+    "address": "CUmu7iSDj5RavATJnm2Xsrvkjo7iqAb7MeT3GVsgmg7o",
+    "metadata": {
+        "name": "sol_carbon",
+        "version": "0.1.0",
+        "spec": "0.1.0"
+    },
+    "instructions": [
+        {
+            "name": "initialize_treasury",
+            "discriminator": [124, 186, 211, 195, 85, 165, 129, 166],
+            "accounts": [
+                {
+                    "name": "admin",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "treasury_state",
+                    "writable": true
+                },
+                {
+                    "name": "mint"
+                },
+                {
+                    "name": "system_program",
+                    "address": "11111111111111111111111111111111"
+                }
+            ],
+            "args": []
+        },
+        {
+            "name": "buy_credits",
+            "discriminator": [14, 173, 58, 38, 248, 235, 115, 102],
+            "accounts": [
+                {
+                    "name": "user",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "treasury_state",
+                    "writable": true
+                },
+                {
+                    "name": "mint",
+                    "writable": true
+                },
+                {
+                    "name": "user_ata",
+                    "writable": true
+                },
+                {
+                    "name": "token_program",
+                    "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                },
+                {
+                    "name": "system_program",
+                    "address": "11111111111111111111111111111111"
+                }
+            ],
+            "args": [
+                {
+                    "name": "amount",
+                    "type": "u64"
+                },
+                {
+                    "name": "price_per_cc_lamports",
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "sell_credits",
+            "discriminator": [222, 18, 71, 18, 193, 0, 138, 244],
+            "accounts": [
+                {
+                    "name": "user",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "treasury_state",
+                    "writable": true
+                },
+                {
+                    "name": "mint",
+                    "writable": true
+                },
+                {
+                    "name": "user_ata",
+                    "writable": true
+                },
+                {
+                    "name": "treasury_ata",
+                    "writable": true
+                },
+                {
+                    "name": "token_program",
+                    "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                }
+            ],
+            "args": [
+                {
+                    "name": "amount",
+                    "type": "u64"
+                },
+                {
+                    "name": "price_per_cc_lamports",
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "retire_credits",
+            "discriminator": [0, 223, 106, 1, 228, 82, 170, 45],
+            "accounts": [
+                {
+                    "name": "user",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "mint",
+                    "writable": true
+                },
+                {
+                    "name": "user_ata",
+                    "writable": true
+                },
+                {
+                    "name": "token_program",
+                    "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                }
+            ],
+            "args": [
+                {
+                    "name": "amount",
+                    "type": "u64"
+                }
+            ]
+        }
+    ],
+    "accounts": [
+        {
+            "name": "TreasuryState",
+            "discriminator": [240, 56, 226, 158, 138, 244, 79, 154]
+        }
+    ],
+    "types": [
+        {
+            "name": "TreasuryState",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "admin",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "mint",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "bump",
+                        "type": "u8"
+                    }
+                ]
+            }
+        }
+    ],
+    "errors": [
+        {
+            "code": 6000,
+            "name": "InsufficientTreasuryFunds",
+            "msg": "Not enough SOL in the treasury to process this sell."
+        },
+        {
+            "code": 6001,
+            "name": "InvalidAmount",
+            "msg": "Amount must be greater than 0."
+        },
+        {
+            "code": 6002,
+            "name": "MathOverflow",
+            "msg": "Math overflow during amount conversion."
+        }
+    ]
+}

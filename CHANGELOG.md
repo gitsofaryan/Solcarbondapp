@@ -1,7 +1,101 @@
-# SolCarbon Mobile App — Changelog
+# SolCarbon — Changelog
 
-> All notable changes to the **mobile** application are documented here.
+> All notable changes to the SolCarbon dApp are documented here.
 > Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Dates in IST (UTC+5:30).
+
+---
+
+## [1.0.0] — 2026-03-07
+
+### 🔗 Smart Contract — Anchor Program
+
+- **Program deployed** to Solana Devnet: `CUmu7iSDj5RavATJnm2Xsrvkgo7iqAb7MeT3GVsgmg7o`
+- Fixed buy/sell mechanism — amounts now use base units with `CC_DECIMALS_FACTOR = 100` (2 decimals)
+- Treasury PDA (`EM1yn6t5cbyQWSeNmQziqRVhgnjPASZEF92MM8sgMaK4`, bump 255) initialized on devnet
+- Mint authority transferred from treasury keypair to Treasury PDA
+- IDL converted to Anchor 0.30+ format (fixed `_bn` runtime deserialization error)
+- All client-side Anchor calls migrated to `accountsStrict` with SHA256 discriminators
+- Added `init-treasury-pda.mjs` script for PDA initialization
+
+### 🏗 Blockchain Store (blockchain-store.ts)
+
+- Replaced simulated trades with real Anchor program calls (`buy_credits`, `sell_credits`, `retire_credits`)
+- Amount normalization: `normalizeCCAmount()`, `toCCBaseUnits()`, `fromRawCCAmount()`
+- `sendWithRetry()` helper — 3-attempt exponential backoff for transient devnet RPC errors
+- `stampBlockhash()` helper — proper blockhash assignment for `@solana/web3.js` v1
+- SPL mint transaction fixed: uses `tx.sign(treasury)` (treasury is sole signer)
+- Sell flow split into two confirmed transactions (CC transfer + SOL payout)
+- NFT mint made non-fatal — SPL purchase succeeds regardless of Metaplex Core errors
+- Moved `delay()` after wallet-check to prevent blockhash expiry
+
+### 🪙 Wallet & Provider (WalletProvider.tsx)
+
+- Treasury address updated from keypair to PDA `EM1yn6t5cbyQWSeNmQziqRVhgnjPASZEF92MM8sgMaK4`
+- Added SKR (Solana Mobile ecosystem token) balance fetching from mainnet
+- `refreshBalance()` now fetches SOL from devnet AND SKR from mainnet via ATA lookup
+- Context type extended with `skrBalance: number | null`
+- Fixed wallet auto-detection for Phantom/Solflare/Backpack
+
+### 🧭 Header (Header.tsx)
+
+- CC balance pill now only shows when wallet is connected
+- Added SKR balance pill (📱 icon, green `#14F195`) — visible when SKR balance > 0
+- Balance pills show real on-chain data
+
+### 📋 DisconnectModal
+
+- Fixed clipboard copy — uses `navigator.clipboard.writeText()` for web (removed `expo-clipboard` dependency)
+- Added working Solana Explorer link (opens `explorer.solana.com/address/...?cluster=devnet`)
+- Added SKR balance display box (green-tinted) when balance > 0
+
+### 📊 HistoryScreen
+
+- Fixed price display: changed from `$` (USD) to `◎ SOL` for Price/CC and Total
+- Transaction list now shows `◎ {totalSOL} SOL` instead of incorrect dollar amounts
+- Detail modal Price/CC and Total rows corrected
+
+### 💼 PortfolioScreen
+
+- Fixed portfolio value calculation — uses actual per-project `pricePerCC` from `verifiedProjects` instead of hardcoded `totalCC * 0.1`
+
+### 💰 SellProjectScreen
+
+- Added `wallet.refreshBalance()` after successful sell for immediate balance update
+
+### ℹ️ ProtocolInfoModal
+
+- Label updated to "Treasury PDA (Mint Authority)" to reflect PDA-based architecture
+
+### 🎨 DynamicCertificate — Complete Redesign
+
+- **Background**: 4-stop gradient `#0f0326 → #0a1628 → #021a0e → #0a0a14` (purple → navy → green → dark)
+- **3 animation layers**:
+  - Shimmer sweep (3.5s bezier curve)
+  - Pulsing glow orbs — purple top-right + green bottom-left (2s breathing)
+  - Rotating border glow (8s full rotation with `#9945FF → #14F195` gradient)
+- Coin-style logo header in `LinearGradient` circle with verified badge
+- Centered hero amount display with separated "TONNES / CO₂e" units
+- Project name in a pill badge with leaf icon
+- Metadata grid with purple dividers
+- Chain badge ("SOLANA DEVNET") in footer
+- Purple-tinted QR code
+- Pop-out modal with purple + green glow shadow
+- Aspect ratio changed from 1.4 to 1.55, border radius 16 → 20
+
+### 🖼 Branding & Icons
+
+- All app icons regenerated from SolCarbon logo (`solcarbon-logo.png`):
+  - `icon.png` (1024×1024), `favicon.png` (48×48), `splash-icon.png` (200×200)
+  - Android adaptive: foreground (66% safe zone), background (`#0f0326`), monochrome
+- Splash screen background → `#0f0326` (dark purple)
+- `userInterfaceStyle` → `"dark"`
+- Added iOS `bundleIdentifier`: `com.solcarbon.app`
+
+### 🚀 Deployment
+
+- Created `eas.json` with `dappstore` build profile (APK output, not AAB)
+- EAS project linked: `909c03d8-4120-4010-8925-da3fb992d100`
+- Ready for Solana dApp Store submission via publisher.solanamobile.com
 
 ---
 
