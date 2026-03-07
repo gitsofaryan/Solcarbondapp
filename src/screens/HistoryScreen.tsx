@@ -118,7 +118,7 @@ export const HistoryScreen: React.FC = () => {
                                         {tx.type === 'buy' ? '+' : '-'}{tx.amount} CC
                                     </Text>
                                     <Text style={styles.tokenUsd}>
-                                        ${(tx.amount * tx.pricePerCC).toFixed(2)}
+                                        ◎ {tx.totalSOL.toFixed(4)} SOL
                                     </Text>
                                 </View>
                             </TouchableOpacity>
@@ -202,13 +202,13 @@ export const HistoryScreen: React.FC = () => {
                                     <View style={styles.detailRow}>
                                         <Text style={styles.detailLabel}>Price/CC</Text>
                                         <Text style={styles.detailValue}>
-                                            ${selectedTx.pricePerCC.toFixed(2)}
+                                            ◎ {selectedTx.pricePerCC.toFixed(4)} SOL
                                         </Text>
                                     </View>
                                     <View style={styles.detailRow}>
                                         <Text style={styles.detailLabel}>Total</Text>
                                         <Text style={[styles.detailValue, { fontWeight: '800' }]}>
-                                            ${(selectedTx.amount * selectedTx.pricePerCC).toFixed(2)}
+                                            ◎ {selectedTx.totalSOL.toFixed(4)} SOL
                                         </Text>
                                     </View>
                                     <View style={styles.detailRow}>

@@ -70,7 +70,7 @@ const PriceChart: React.FC<{ data: number[]; positive: boolean }> = ({ data, pos
                                 ]}
                             />
                             {isLast && (
-                                <View style={[styles.barDot, { backgroundColor: color, shadowColor: color, shadowOpacity: 0.5, shadowRadius: 5, elevation: 5 }]} />
+                                <View style={[styles.barDot, { backgroundColor: color, ...Platform.select({ ios: { shadowColor: color, shadowOpacity: 0.5, shadowRadius: 5 }, web: { boxShadow: `0 0 10px ${color}` }, default: { elevation: 5 } }) }]} />
                             )}
                         </View>
                     );

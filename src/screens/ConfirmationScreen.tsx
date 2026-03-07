@@ -91,9 +91,8 @@ export const ConfirmationScreen: React.FC = () => {
                     <DynamicCertificate
                         projectName={projectName}
                         amount={amount}
-                        date={dateStr}
-                        assetId={assetId}
-                        holderAddress={wallet.walletAddress || ''}
+                        mintDate={dateStr}
+                        tokenId={assetId}
                         purchasingFirm={purchasingFirm}
                     />
                 </Animated.View>

@@ -4,9 +4,10 @@ import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, cl
 import { WalletModal } from '../components/WalletModal';
 import { DisconnectModal } from '../components/DisconnectModal';
 import { useBlockchainStore } from '../store/blockchain-store';
-import { CC_TOKEN_MINT } from '../utils/solana';
+import { CC_TOKEN_MINT, SKR_TOKEN_MINT } from '../utils/solana';
+import * as splToken from '@solana/spl-token';
 
-const TREASURY_ADDRESS = '4yEfgUdei5xQUrTwDA79vNTD9dPGS713qocD6XbkZcFB';
+const TREASURY_ADDRESS = 'EM1yn6t5cbyQWSeNmQziqRVhgnjPASZEF92MM8sgMaK4';
 
 // MWA imports — only used on native mobile
 let transactMWA: any = null;
@@ -31,6 +32,7 @@ interface WalletContextType {
     walletAddress: string | null;
     walletName: string | null;
     solBalance: number | null;
+    skrBalance: number | null;
     openConnectModal: () => void;
     openDisconnectModal: () => void;
     disconnect: () => void;
@@ -113,6 +115,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [connectingWalletId, setConnectingWalletId] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
     const [solBalance, setSolBalance] = useState<number | null>(null);
+    const [skrBalance, setSkrBalance] = useState<number | null>(null);
     const [connectModalVisible, setConnectModalVisible] = useState(false);
     const [disconnectModalVisible, setDisconnectModalVisible] = useState(false);
 
@@ -152,6 +155,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setPublicKey(null);
         setWalletName(null);
         setSolBalance(null);
+        setSkrBalance(null);
     }, []);
 
     const openConnectModal = useCallback(() => setConnectModalVisible(true), []);
@@ -188,7 +192,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 });
             }
         },
-        [publicKey]
+        [publicKey, walletName]
     );
 
     const sendSOL = useCallback(
@@ -221,14 +225,25 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         [publicKey, connection, signTransaction]
     );
 
-    // ── Auto-fetch SOL balance on connect & every 30s ──
+    // ── Auto-fetch SOL + SKR balance on connect & every 15s ──
     const refreshBalance = useCallback(async () => {
-        if (!publicKey) { setSolBalance(null); return; }
+        if (!publicKey) { setSolBalance(null); setSkrBalance(null); return; }
         try {
             const bal = await connection.getBalance(publicKey);
             setSolBalance(bal / LAMPORTS_PER_SOL);
         } catch (e) {
-            console.error('Failed to fetch balance:', e);
+            console.error('Failed to fetch SOL balance:', e);
+        }
+        // SKR is a mainnet token — read from mainnet
+        try {
+            const mainnetConn = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+            const skrMint = new PublicKey(SKR_TOKEN_MINT);
+            const skrAta = await splToken.getAssociatedTokenAddress(skrMint, publicKey);
+            const info = await mainnetConn.getTokenAccountBalance(skrAta);
+            setSkrBalance(info.value.uiAmount ?? 0);
+        } catch (_) {
+            // User likely has no SKR ATA yet — that's fine
+            setSkrBalance(0);
         }
     }, [publicKey, connection]);
 
@@ -246,6 +261,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             return () => clearInterval(interval);
         } else {
             setSolBalance(null);
+            setSkrBalance(null);
         }
     }, [publicKey, refreshBalance]);
 
@@ -262,13 +278,14 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                         disconnect();
                     }
                 };
+                const handleConnect = (pk: PublicKey) => setPublicKey(new PublicKey(pk.toString()));
                 provider.on('accountChanged', handleAccountChange);
-                provider.on('connect', (pk: PublicKey) => setPublicKey(new PublicKey(pk.toString())));
+                provider.on('connect', handleConnect);
                 provider.on('disconnect', disconnect);
                 return () => {
                     if (provider.removeListener) {
                         provider.removeListener('accountChanged', handleAccountChange);
-                        provider.removeListener('connect', setPublicKey);
+                        provider.removeListener('connect', handleConnect);
                         provider.removeListener('disconnect', disconnect);
                     }
                 };
@@ -284,6 +301,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         walletAddress: publicKey?.toBase58() ?? null,
         walletName,
         solBalance,
+        skrBalance,
         openConnectModal,
         openDisconnectModal,
         disconnect,
@@ -296,7 +314,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             treasury: TREASURY_ADDRESS,
             mint: CC_TOKEN_MINT,
         },
-    }), [publicKey, connecting, sending, walletName, solBalance, openConnectModal, openDisconnectModal, disconnect, getBalance, refreshBalance, signTransaction, sendSOL, connection]);
+    }), [publicKey, connecting, sending, walletName, solBalance, skrBalance, openConnectModal, openDisconnectModal, disconnect, getBalance, refreshBalance, signTransaction, sendSOL, connection]);
 
     return (
         <WalletContext.Provider value={value}>
@@ -313,6 +331,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 onClose={() => setDisconnectModalVisible(false)}
                 walletAddress={publicKey?.toBase58() ?? ''}
                 solBalance={solBalance}
+                skrBalance={skrBalance}
                 onDisconnect={disconnect}
             />
         </WalletContext.Provider>

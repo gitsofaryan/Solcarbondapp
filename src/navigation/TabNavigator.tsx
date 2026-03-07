@@ -48,7 +48,6 @@ export const TabNavigator: React.FC = () => {
                     backgroundColor: colors.background,
                     borderTopWidth: 0,
                     elevation: 0,
-                    shadowOpacity: 0,
                     height: 70 + bottomPadding,
                     paddingBottom: bottomPadding > 0 ? bottomPadding : 10,
                     paddingTop: 8,
