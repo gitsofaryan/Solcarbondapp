@@ -15,8 +15,9 @@ import {
 } from '@solana/spl-token';
 import { TREASURY_SECRET_KEY, CC_TOKEN_MINT as MINT_ADDRESS } from '../utils/ecosystem';
 import { generateSigner, keypairIdentity, publicKey as umiPublicKey } from '@metaplex-foundation/umi';
-import { create as createCoreAsset, burn as burnCoreAsset, fetchAsset } from '@metaplex-foundation/mpl-core';
+import { create as createCoreAsset, burn as burnCoreAsset, fetchAsset, fetchAssetsByOwner } from '@metaplex-foundation/mpl-core';
 import { getUmi, CC_TOKEN_MINT } from '../utils/solana';
+import { verifiedProjects } from '../data/verified-projects';
 import bs58 from 'bs58';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -166,10 +167,60 @@ export const useBlockchainStore = create<BlockchainState>()(
             },
 
             refreshOnChainData: async (walletPublicKey) => {
-                // We no longer fetch SPL token balance to avoid "ghost" numbers.
-                // Portfolio is now derived from NFT certificates in the UI.
                 if (!walletPublicKey) return;
                 console.log('[Sync] Refreshing data for:', walletPublicKey);
+
+                try {
+                    const umi = getUmi();
+                    const ownerPk = umiPublicKey(walletPublicKey);
+                    
+                    // 1. Fetch all Metaplex Core assets owned by this wallet
+                    const assets = await fetchAssetsByOwner(umi, ownerPk);
+                    
+                    // 2. Filter for SolCarbon certificates
+                    const solCarbonAssets = assets.filter(asset => 
+                        asset.name.includes('Carbon Certificate') || 
+                        (asset as any).plugins?.attributes?.attributeList?.some((attr: any) => attr.key === 'Project')
+                    );
+
+                    console.log(`[Sync] Found ${solCarbonAssets.length} SolCarbon assets on-chain.`);
+
+                    // 3. Map to our app's NFTCertificate format
+                    const fetchedCerts: NFTCertificate[] = solCarbonAssets.map(asset => {
+                        const attributes = (asset as any).plugins?.attributes?.attributeList || [];
+                        const projectName = attributes.find((a: any) => a.key === 'Project')?.value || asset.name.split(': ')[1] || 'Unknown Project';
+                        const amountStr = attributes.find((a: any) => a.key === 'Amount')?.value || '0';
+                        const amount = parseFloat(amountStr);
+                        const purchasingFirm = attributes.find((a: any) => a.key === 'Purchasing Firm')?.value || 'Unknown';
+                        
+                        // Try to find the matching project to get the ID and image
+                        const matchingProject = verifiedProjects.find(p => p.name === projectName);
+
+                        return {
+                            id: asset.publicKey.toString(),
+                            projectId: matchingProject?.id || 'unknown',
+                            projectName: projectName,
+                            purchasingFirm: purchasingFirm,
+                            amount: amount,
+                            uri: asset.uri || (matchingProject?.image || ''),
+                            tokenId: asset.publicKey.toString(),
+                            mintDate: new Date(), // We don't have exact block time here, using current as fallback
+                            owner: walletPublicKey,
+                        };
+                    });
+
+                    // 4. Update the store - replace existing certs for THIS wallet
+                    set(state => {
+                        // Keep certs from other wallets (if any were persisted) but replace current wallet's truth
+                        const otherWalletCerts = state.nftCertificates.filter(c => c.owner !== walletPublicKey);
+                        return {
+                            nftCertificates: [...fetchedCerts, ...otherWalletCerts],
+                        };
+                    });
+
+                } catch (error) {
+                    console.error('[Sync] Failed to fetch on-chain assets:', error);
+                }
             },
 
             // ── BUY ─────────────────────────────────────────────────────────

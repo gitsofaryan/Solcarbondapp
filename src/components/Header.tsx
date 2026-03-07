@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
@@ -21,7 +21,10 @@ export const Header: React.FC = () => {
             <View style={styles.topRow}>
                 <View style={styles.leftSection}>
                     <View style={styles.logoBg}>
-                        <Ionicons name="leaf" size={16} color={colors.green} />
+                        <Image
+                            source={require('../../assets/solcarbon-logo.png')}
+                            style={styles.headerLogo}
+                        />
                     </View>
                     <View>
                         <Text style={styles.appName}>SolCarbon</Text>
@@ -89,12 +92,19 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     logoBg: {
-        width: 32,
-        height: 32,
-        borderRadius: 16, // Fully rounded
-        backgroundColor: 'rgba(45, 212, 191, 0.1)',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        overflow: 'hidden',
+    },
+    headerLogo: {
+        width: '100%',
+        height: '100%',
     },
     appName: {
         fontSize: 15,

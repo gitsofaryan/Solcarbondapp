@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Platform, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/colors';
 
@@ -33,7 +33,7 @@ export const DynamicCertificate: React.FC<DynamicCertificateProps> = ({
     return (
         <View style={styles.cardContainer}>
             <LinearGradient
-                colors={['#064e3b', '#065f46', '#022c22']}
+                colors={['#064e1e', '#065f46', '#022c22']}
                 style={styles.cardGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -43,8 +43,11 @@ export const DynamicCertificate: React.FC<DynamicCertificateProps> = ({
                 <View style={styles.decorCircle2} />
 
                 <View style={styles.cardHeader}>
-                    <View>
-                        <MaterialCommunityIcons name="leaf" size={28} color={colors.green} />
+                    <View style={styles.headerLeft}>
+                        <Image
+                            source={require('../../assets/solcarbon-logo.png')}
+                            style={styles.logoImage}
+                        />
                         <Text style={styles.brandTitle}>SOLCARBON</Text>
                     </View>
                     <View style={styles.verifiedStamp}>
@@ -138,12 +141,21 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'flex-start',
     },
+    headerLeft: {
+        flexDirection: 'column',
+        alignItems: 'center',
+    },
+    logoImage: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+    },
     brandTitle: {
         color: '#fff',
         fontSize: 10,
         fontWeight: '900',
         letterSpacing: 2,
-        marginTop: 2,
+        marginTop: 4,
     },
     verifiedStamp: {
         flexDirection: 'row',
@@ -201,6 +213,7 @@ const styles = StyleSheet.create({
     footerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        width: '100%',
     },
     footerItem: {
         flex: 1,

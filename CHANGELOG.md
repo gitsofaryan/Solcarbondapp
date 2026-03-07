@@ -12,6 +12,8 @@
 #### Credit Retirement (Portfolio Screen)
 - Added **🔥 Retire** button below every NFT certificate card in the Portfolio tab
 - New retirement bottom-sheet modal with:
+- Added **On-Chain Sync**: The app now derives your Carbon Credit balance and portfolio directly from the blockchain (Metaplex Core assets). This ensures that when you switch wallets, only the certificates owned by that specific address are displayed.
+
   - Purpose selection (ESG / BRSR Compliance, Personal Carbon Neutral, Supply Chain Offset, Climate Gift)
   - ⚠️ Irreversibility warning banner
   - Animated loading state during on-chain burn
