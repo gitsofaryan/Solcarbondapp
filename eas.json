@@ -19,8 +19,10 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
+      "node": "22.14.0",
       "env": {
-        "APP_VARIANT": "dappstore"
+        "APP_VARIANT": "dappstore",
+        "EAS_BUILD_NPM_CACHE_URL": ""
       }
     },
     "production": {
