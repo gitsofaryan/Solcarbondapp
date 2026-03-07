@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { useBlockchainStore, CarbonProject } from '../store/blockchain-store';
-import { mockProjects } from '../data/mock-projects';
+import { verifiedProjects } from '../data/verified-projects';
 import { solToUsd } from '../utils/price';
 import { useWalletContext } from '../providers/WalletProvider';
 
@@ -35,7 +35,13 @@ const PriceChart: React.FC<{ data: number[]; positive: boolean }> = ({ data, pos
     const bgColor = positive ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)';
 
     return (
-        <View style={[styles.chartContainer, { backgroundColor: bgColor }]}>
+        <View style={styles.chartContainer}>
+            <LinearGradient
+                colors={[bgColor, 'transparent']}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 1 }}
+                end={{ x: 0, y: 0 }}
+            />
             {/* Y-axis labels */}
             <View style={styles.yAxis}>
                 <Text style={styles.yLabel}>◎ {max.toFixed(3)}</Text>
@@ -46,7 +52,7 @@ const PriceChart: React.FC<{ data: number[]; positive: boolean }> = ({ data, pos
             <View style={styles.chartBars}>
                 {data.map((v, i) => {
                     const pct = ((v - min) / range);
-                    const barH = Math.max(8, pct * (CHART_H - 40));
+                    const barH = Math.max(8, pct * (CHART_H - 50));
                     const isLast = i === data.length - 1;
                     return (
                         <View key={i} style={styles.barWrapper}>
@@ -55,14 +61,16 @@ const PriceChart: React.FC<{ data: number[]; positive: boolean }> = ({ data, pos
                                     styles.bar,
                                     {
                                         height: barH,
-                                        backgroundColor: isLast ? color : color + '50',
+                                        backgroundColor: isLast ? color : color + '30',
                                         borderColor: isLast ? color : 'transparent',
-                                        borderWidth: isLast ? 1 : 0,
+                                        borderWidth: isLast ? 2 : 0,
+                                        borderTopLeftRadius: 4,
+                                        borderTopRightRadius: 4,
                                     },
                                 ]}
                             />
                             {isLast && (
-                                <View style={[styles.barDot, { backgroundColor: color }]} />
+                                <View style={[styles.barDot, { backgroundColor: color, shadowColor: color, shadowOpacity: 0.5, shadowRadius: 5, elevation: 5 }]} />
                             )}
                         </View>
                     );
@@ -83,14 +91,19 @@ interface ProjectDetailScreenProps {
 
 export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projectId, prefilledAmount, onBack }) => {
     const navigation = useNavigation<any>();
-    const { buyCredits, sellCredits, carbonCredits, isLoading } = useBlockchainStore();
+    const { buyCredits, sellCredits, nftCertificates, isLoading } = useBlockchainStore();
     const wallet = useWalletContext();
+
+    // ── Derive CC balance from owned certificates ──
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress);
+    const myTotalCC = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
+
     const [buyAmount, setBuyAmount] = useState(prefilledAmount ?? 10);
     const [activeRange, setActiveRange] = useState<typeof timeRanges[number]>('1W');
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
 
     const project = useMemo(
-        () => mockProjects.find(p => p.id === projectId) || mockProjects[0],
+        () => verifiedProjects.find(p => p.id === projectId) || verifiedProjects[0],
         [projectId],
     );
 
@@ -99,9 +112,9 @@ export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projec
         const base = project.sparkline;
         if (activeRange === '1D') return base.slice(-3);
         if (activeRange === '1W') return base;
-        if (activeRange === '1M') return [...base, ...base.map(v => v * (1 + Math.random() * 0.05))];
-        if (activeRange === '3M') return [...base, ...base, ...base.map(v => v * (1 + Math.random() * 0.08))];
-        return [...base, ...base, ...base, ...base.map(v => v * (1 + Math.random() * 0.1))];
+        if (activeRange === '1M') return [...base, ...base.map((v: number) => v * (1 + Math.random() * 0.05))];
+        if (activeRange === '3M') return [...base, ...base, ...base.map((v: number) => v * (1 + Math.random() * 0.08))];
+        return [...base, ...base, ...base, ...base.map((v: number) => v * (1 + Math.random() * 0.1))];
     }, [project.sparkline, activeRange]);
 
     const totalCostSOL = buyAmount * project.pricePerCC;
@@ -129,7 +142,8 @@ export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projec
                 projectName: project.name,
                 totalCostSOL: totalCostSOL,
                 assetId: result?.assetId || 'PENDING MINT',
-                signature: result?.signature || ''
+                signature: result?.signature || '',
+                purchasingFirm: 'Individual Collector'
             });
 
             setBuyAmount(10);
@@ -144,8 +158,8 @@ export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projec
             wallet.openConnectModal();
             return;
         }
-        if (buyAmount > carbonCredits) {
-            Alert.alert('Insufficient Credits', `You only have ${carbonCredits} CC.`);
+        if (buyAmount > myTotalCC) {
+            Alert.alert('Insufficient Credits', `You only have ${myTotalCC} CC in your certificates.`);
             return;
         }
         try {
@@ -302,16 +316,20 @@ export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projec
                 </View>
 
                 {/* Amount selector */}
-                <View style={styles.amountRow}>
-                    {[5, 10, 25, 50, 100].map((amt) => (
+                <View style={[styles.amountRow, { flexWrap: 'wrap' }]}>
+                    {[1, 2, 10, 50, 100, 500].map((amt) => (
                         <TouchableOpacity
                             key={amt}
-                            style={[styles.amountBtn, buyAmount === amt && (activeTab === 'buy' ? styles.amountBuyActive : styles.amountSellActive)]}
+                            style={[
+                                styles.amountBtn,
+                                buyAmount === amt && (activeTab === 'buy' ? styles.amountBuyActive : styles.amountSellActive),
+                                { width: (width - 48) / 3 - 4, marginBottom: 6 }
+                            ]}
                             onPress={() => setBuyAmount(amt)}
                             activeOpacity={0.8}
                         >
                             <Text style={[styles.amountText, buyAmount === amt && { color: activeTab === 'buy' ? colors.green : '#EF4444' }]}>
-                                {amt}
+                                {amt === 500 ? '500 (Max)' : amt}
                             </Text>
                         </TouchableOpacity>
                     ))}

@@ -61,11 +61,9 @@ export const ListProjectScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-                    <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-                </TouchableOpacity>
+            <View style={styles.header}><TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+                <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
                 <Text style={styles.headerTitle}>List New Project</Text>
                 <View style={{ width: 36 }} /> {/* Balance out back button */}
             </View>

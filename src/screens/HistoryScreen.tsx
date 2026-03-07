@@ -6,25 +6,32 @@ import {
     ScrollView,
     TouchableOpacity,
     Modal,
+    Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useBlockchainStore, Transaction } from '../store/blockchain-store';
+import { useWalletContext } from '../providers/WalletProvider';
+import { CC_TOKEN_MINT } from '../utils/solana';
+
 
 type FilterType = 'all' | 'buy' | 'sell';
 
 export const HistoryScreen: React.FC = () => {
     const { transactions } = useBlockchainStore();
+    const wallet = useWalletContext();
     const [filter, setFilter] = useState<FilterType>('all');
     const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
-    const filtered = transactions.filter((tx) => {
+    const myTransactions = transactions.filter(t => t.owner === wallet.walletAddress);
+
+    const filtered = myTransactions.filter((tx) => {
         if (filter === 'all') return true;
         return tx.type === filter;
     });
 
-    const formatDate = (date: Date) =>
-        date.toLocaleDateString('en-US', {
+    const formatDate = (date: any) =>
+        new Date(date).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
@@ -35,7 +42,18 @@ export const HistoryScreen: React.FC = () => {
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 <Text style={styles.title}>Transaction History</Text>
-                <Text style={styles.subtitle}>{transactions.length} total transactions</Text>
+
+                <TouchableOpacity
+                    style={styles.globalActivityBtn}
+                    onPress={() => Linking.openURL(`https://explorer.solana.com/address/${CC_TOKEN_MINT}?cluster=devnet`)}
+                    activeOpacity={0.7}
+                >
+                    <Ionicons name="globe-outline" size={16} color={colors.green} />
+                    <Text style={styles.globalActivityText}>View Global SOLCC Activity</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.subtitle}>{myTransactions.length} total transactions</Text>
+
 
                 {/* Filters */}
                 <View style={styles.filterRow}>
@@ -58,61 +76,55 @@ export const HistoryScreen: React.FC = () => {
                 </View>
 
                 {/* Transaction List */}
-                {filtered.length === 0 ? (
-                    <View style={styles.emptyState}>
-                        <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
-                        <Text style={styles.emptyTitle}>No transactions yet</Text>
-                        <Text style={styles.emptySubtitle}>
-                            Your transaction history will appear here
-                        </Text>
-                    </View>
-                ) : (
-                    filtered.map((tx) => (
-                        <TouchableOpacity
-                            key={tx.id}
-                            style={styles.txCard}
-                            onPress={() => setSelectedTx(tx)}
-                            activeOpacity={0.85}
-                        >
-                            <View
-                                style={[
-                                    styles.txIcon,
-                                    {
-                                        backgroundColor:
-                                            tx.type === 'buy' ? colors.greenBg : colors.amberBg,
-                                    },
-                                ]}
+                <View style={styles.list}>
+                    {filtered.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
+                            <Text style={styles.emptyTitle}>No transactions yet</Text>
+                            <Text style={styles.emptySubtitle}>
+                                Your transaction history will appear here
+                            </Text>
+                        </View>
+                    ) : (
+                        filtered.map((tx) => (
+                            <TouchableOpacity
+                                key={tx.id}
+                                style={styles.tokenRow}
+                                onPress={() => setSelectedTx(tx)}
+                                activeOpacity={0.7}
                             >
-                                <Ionicons
-                                    name={tx.type === 'buy' ? 'arrow-down' : 'arrow-up'}
-                                    size={18}
-                                    color={tx.type === 'buy' ? colors.green : colors.amber}
-                                />
-                            </View>
+                                <View style={[styles.tokenLogo, { backgroundColor: tx.type === 'buy' ? colors.greenBg : colors.amberBg }]}>
+                                    <Ionicons
+                                        name={tx.type === 'buy' ? 'arrow-down' : 'arrow-up'}
+                                        size={20}
+                                        color={tx.type === 'buy' ? colors.green : colors.amber}
+                                    />
+                                </View>
 
-                            <View style={styles.txInfo}>
-                                <Text style={styles.txProject} numberOfLines={1}>
-                                    {tx.projectName}
-                                </Text>
-                                <Text style={styles.txDate}>{formatDate(tx.timestamp)}</Text>
-                            </View>
+                                <View style={styles.tokenMid}>
+                                    <Text style={styles.tokenTicker} numberOfLines={1}>
+                                        {tx.projectName}
+                                    </Text>
+                                    <Text style={styles.tokenName}>{formatDate(tx.timestamp)}</Text>
+                                </View>
 
-                            <View style={styles.txRight}>
-                                <Text
-                                    style={[
-                                        styles.txAmount,
-                                        { color: tx.type === 'buy' ? colors.green : colors.amber },
-                                    ]}
-                                >
-                                    {tx.type === 'buy' ? '+' : '-'}{tx.amount} CC
-                                </Text>
-                                <Text style={styles.txCost}>
-                                    ${(tx.amount * tx.pricePerCC).toFixed(2)}
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-                    ))
-                )}
+                                <View style={styles.tokenRight}>
+                                    <Text
+                                        style={[
+                                            styles.tokenBalance,
+                                            { color: tx.type === 'buy' ? colors.green : colors.amber },
+                                        ]}
+                                    >
+                                        {tx.type === 'buy' ? '+' : '-'}{tx.amount} CC
+                                    </Text>
+                                    <Text style={styles.tokenUsd}>
+                                        ${(tx.amount * tx.pricePerCC).toFixed(2)}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))
+                    )}
+                </View>
 
                 <View style={{ height: 100 }} />
             </ScrollView>
@@ -212,7 +224,7 @@ export const HistoryScreen: React.FC = () => {
                                     <View style={styles.detailRow}>
                                         <Text style={styles.detailLabel}>Date</Text>
                                         <Text style={styles.detailValue}>
-                                            {selectedTx.timestamp.toLocaleString()}
+                                            {new Date(selectedTx.timestamp).toLocaleString()}
                                         </Text>
                                     </View>
                                     <View style={[styles.detailRow, { flexDirection: 'column', gap: 6 }]}>
@@ -223,7 +235,16 @@ export const HistoryScreen: React.FC = () => {
                                     </View>
                                 </View>
 
-                                <TouchableOpacity style={styles.explorerBtn} activeOpacity={0.8}>
+                                <TouchableOpacity
+                                    style={styles.explorerBtn}
+                                    activeOpacity={0.8}
+                                    onPress={() => {
+                                        if (selectedTx.explorerUrl) {
+                                            const { Linking } = require('react-native');
+                                            Linking.openURL(selectedTx.explorerUrl);
+                                        }
+                                    }}
+                                >
                                     <Ionicons name="open-outline" size={16} color={colors.blue} />
                                     <Text style={styles.explorerText}>View on Solana Explorer</Text>
                                 </TouchableOpacity>
@@ -297,50 +318,51 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: colors.textMuted,
     },
-    txCard: {
+    list: {
+        gap: 0,
+    },
+    tokenRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginHorizontal: 16,
-        marginBottom: 10,
-        padding: 14,
-        borderRadius: 14,
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-        gap: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
     },
-    txIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+    tokenLogo: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
+        marginRight: 12,
     },
-    txInfo: {
+    tokenMid: {
         flex: 1,
+        gap: 2,
     },
-    txProject: {
-        fontSize: 14,
-        fontWeight: '600',
+    tokenTicker: {
+        fontSize: 16,
+        fontWeight: '700',
         color: colors.textPrimary,
-        marginBottom: 2,
     },
-    txDate: {
-        fontSize: 11,
-        color: colors.textMuted,
-    },
-    txRight: {
-        alignItems: 'flex-end',
-    },
-    txAmount: {
-        fontSize: 15,
-        fontWeight: '800',
-    },
-    txCost: {
-        fontSize: 12,
+    tokenName: {
+        fontSize: 13,
         color: colors.textMuted,
         fontWeight: '500',
-        marginTop: 1,
+    },
+    tokenRight: {
+        alignItems: 'flex-end',
+        gap: 2,
+    },
+    tokenBalance: {
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    tokenUsd: {
+        fontSize: 13,
+        color: colors.textMuted,
+        fontWeight: '500',
     },
 
     // Modal
@@ -453,5 +475,24 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: colors.blue,
+    },
+    globalActivityBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.greenBg,
+        marginHorizontal: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        gap: 8,
+        marginTop: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(16, 185, 129, 0.1)',
+        alignSelf: 'flex-start',
+    },
+    globalActivityText: {
+        color: colors.green,
+        fontSize: 12,
+        fontWeight: '700',
     },
 });

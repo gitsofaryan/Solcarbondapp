@@ -16,10 +16,10 @@ import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { useBlockchainStore } from '../store/blockchain-store';
 import { useWalletContext } from '../providers/WalletProvider';
-import { mockProjects } from '../data/mock-projects';
+import { verifiedProjects } from '../data/verified-projects';
 
 // Cheapest available project — used as default for offset purchases
-const OFFSET_PROJECT = [...mockProjects].sort((a, b) => a.pricePerCC - b.pricePerCC)[0];
+const OFFSET_PROJECT = [...verifiedProjects].sort((a, b) => a.pricePerCC - b.pricePerCC)[0];
 
 const { width } = Dimensions.get('window');
 
@@ -74,7 +74,7 @@ function tonne(kgPerYear: number) {
 export const ToolsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const wallet = useWalletContext();
-    const { buyCredits, isLoading } = useBlockchainStore();
+    const { buyCredits, isLoading, resetState } = useBlockchainStore();
     const [activeSection, setActiveSection] = useState<'home' | 'msme' | 'brsr' | 'offset'>('home');
     const [buying, setBuying] = useState(false);
 
@@ -257,6 +257,30 @@ export const ToolsScreen: React.FC = () => {
                             <Ionicons name="arrow-forward" size={16} color="#a78bfa" />
                         </View>
                     </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Reset State Tool */}
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={styles.dangerCard}
+                    onPress={() => {
+                        Alert.alert(
+                            'Reset App Data?',
+                            'This will clear your local transaction history and saved certificates. Your actual tokens on the blockchain are safe.',
+                            [
+                                { text: 'Cancel', style: 'cancel' },
+                                {
+                                    text: 'Reset All', style: 'destructive', onPress: () => {
+                                        resetState();
+                                        Alert.alert('Success', 'Local data cleared. Navigate to Dashboard to refresh from blockchain.');
+                                    }
+                                },
+                            ]
+                        );
+                    }}
+                >
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    <Text style={styles.dangerText}>Clear Local App Data & Reset State</Text>
                 </TouchableOpacity>
 
                 {/* India Carbon Market Info */}
@@ -796,6 +820,25 @@ const styles = StyleSheet.create({
     costPillText: { fontSize: 12, fontWeight: '700', color: colors.green },
     buyBtn: { backgroundColor: colors.green, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: '100%', alignItems: 'center' },
     buyBtnText: { fontSize: 15, fontWeight: '800', color: '#000' },
+
+    // Danger Zone
+    dangerCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: 'rgba(239,68,68,0.08)',
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 20,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(239,68,68,0.2)',
+    },
+    dangerText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#EF4444',
+    },
 
     // MSME Wizard
     wizardHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },

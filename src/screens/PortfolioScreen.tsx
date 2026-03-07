@@ -18,6 +18,8 @@ import { colors } from '../theme/colors';
 import { useBlockchainStore, NFTCertificate } from '../store/blockchain-store';
 import { useWalletContext } from '../providers/WalletProvider';
 import { ProtocolInfoModal } from '../components/ProtocolInfoModal';
+import { verifiedProjects } from '../data/verified-projects';
+import { solToUsd } from '../utils/price';
 
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - 48 - 12) / 2;
@@ -37,7 +39,14 @@ export const PortfolioScreen: React.FC = () => {
     const [retireTarget, setRetireTarget] = useState<NFTCertificate | null>(null);
     const [selectedPurpose, setSelectedPurpose] = useState<string | null>(null);
     const [retiring, setRetiring] = useState(false);
-    const retiredCount = transactions.filter(t => t.type === 'retire').length;
+
+    // ── Filter data by current wallet identity ──
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress);
+    const myTransactions = transactions.filter(t => t.owner === wallet.walletAddress);
+
+    // ── Derive CC balance from owned certificates ──
+    const totalCC = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
+    const retiredCount = myTransactions.filter(t => t.type === 'retire').length;
 
     const handleRetire = async () => {
         if (!retireTarget || !selectedPurpose) return;
@@ -45,7 +54,7 @@ export const PortfolioScreen: React.FC = () => {
         try {
             const sig = await retireCredits(
                 retireTarget.id,
-                wallet.connected ? wallet.publicKey ?? undefined : undefined,
+                wallet.connected ? wallet.walletAddress ?? undefined : undefined,
                 wallet.connected ? wallet.signTransaction : undefined,
             );
             setRetireTarget(null);
@@ -86,14 +95,14 @@ export const PortfolioScreen: React.FC = () => {
                         style={styles.summaryCard}
                     >
                         <Ionicons name="leaf" size={20} color="#000" />
-                        <Text style={styles.summaryValue}>{carbonCredits}</Text>
+                        <Text style={styles.summaryValue}>{totalCC}</Text>
                         <Text style={styles.summaryLabel}>Total CC</Text>
                     </LinearGradient>
 
                     <View style={styles.summaryCardDark}>
                         <Ionicons name="trending-up" size={20} color={colors.amber} />
                         <Text style={[styles.summaryValue, { color: colors.amber }]}>
-                            ◎ {(carbonCredits * 0.1).toFixed(2)}
+                            ◎ {(totalCC * 0.1).toFixed(2)}
                         </Text>
                         <Text style={styles.summaryLabelDark}>Value</Text>
                     </View>
@@ -101,7 +110,7 @@ export const PortfolioScreen: React.FC = () => {
                     <View style={styles.summaryCardDark}>
                         <MaterialCommunityIcons name="certificate" size={20} color={colors.blue} />
                         <Text style={[styles.summaryValue, { color: colors.blue }]}>
-                            {nftCertificates.length}
+                            {myCertificates.length}
                         </Text>
                         <Text style={styles.summaryLabelDark}>NFTs</Text>
                     </View>
@@ -116,7 +125,7 @@ export const PortfolioScreen: React.FC = () => {
                 </View>
 
                 {/* Certificates Grid */}
-                {nftCertificates.length === 0 ? (
+                {myCertificates.length === 0 ? (
                     <View style={styles.emptyState}>
                         <MaterialCommunityIcons
                             name="certificate-outline"
@@ -129,36 +138,38 @@ export const PortfolioScreen: React.FC = () => {
                         </Text>
                     </View>
                 ) : (
-                    <View style={styles.grid}>
-                        {nftCertificates.map((nft) => (
-                            <View key={nft.id} style={styles.nftCardWrap}>
-                                <TouchableOpacity
-                                    style={styles.nftCard}
-                                    onPress={() => navigation.navigate('CertificateDetail', { id: nft.id })}
-                                    activeOpacity={0.85}
-                                >
-                                    <Image source={{ uri: nft.uri }} style={styles.nftImage} />
-                                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.nftGradient} />
-                                    <View style={styles.nftBadge}>
-                                        <Ionicons name="shield-checkmark" size={10} color={colors.green} />
-                                        <Text style={styles.nftBadgeText}>NFT</Text>
-                                    </View>
-                                    <View style={styles.nftContent}>
-                                        <Text style={styles.nftTitle} numberOfLines={1}>{nft.projectName}</Text>
-                                        <Text style={styles.nftAmount}>{nft.amount} CC</Text>
-                                    </View>
-                                </TouchableOpacity>
-                                {/* Retire Button */}
-                                <TouchableOpacity
-                                    style={styles.retireBtn}
-                                    activeOpacity={0.85}
-                                    onPress={() => { setRetireTarget(nft); setSelectedPurpose(null); }}
-                                >
-                                    <Ionicons name="flame" size={13} color={colors.red} />
-                                    <Text style={styles.retireBtnText}>Retire</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ))}
+                    <View style={styles.list}>
+                        {myCertificates.map((nft) => {
+                            const proj = Object.values(verifiedProjects).find(p => p.name === nft.projectName);
+                            const valUsd = solToUsd(nft.amount * (proj?.pricePerCC || 0));
+                            return (
+                                <View key={nft.id} style={styles.tokenRow}>
+                                    <TouchableOpacity
+                                        style={styles.tokenRowTouch}
+                                        onPress={() => navigation.navigate('CertificateDetail', { id: nft.id })}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Image source={{ uri: proj?.image || nft.uri }} style={styles.tokenLogo} />
+                                        <View style={styles.tokenMid}>
+                                            <Text style={styles.tokenTicker}>{proj?.symbol || 'CC'}</Text>
+                                            <Text style={styles.tokenName}>{nft.projectName}</Text>
+                                        </View>
+                                        <View style={styles.tokenRight}>
+                                            <Text style={styles.tokenBalance}>{nft.amount} CC</Text>
+                                            <Text style={styles.tokenUsd}>${valUsd.toFixed(2)}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.inlineRetireBtn}
+                                        activeOpacity={0.8}
+                                        onPress={() => { setRetireTarget(nft); setSelectedPurpose(null); }}
+                                    >
+                                        <Ionicons name="flame" size={16} color={colors.red} />
+                                    </TouchableOpacity>
+                                </View>
+                            );
+                        })}
                     </View>
                 )}
 
@@ -179,13 +190,13 @@ export const PortfolioScreen: React.FC = () => {
                         <View style={styles.modalHandle} />
                         <ScrollView contentContainerStyle={styles.modalContent}>
                             {/* Flame Header */}
-                            <LinearGradient colors={['#3b0a0a', '#1a0404']} style={styles.retireHeader}>
+                            <View style={[styles.retireHeader, { backgroundColor: colors.redBg, borderWidth: 1, borderColor: colors.red + '30' }]}>
                                 <Text style={styles.retireFlame}>🔥</Text>
                                 <Text style={styles.retireHeaderTitle}>Retire Carbon Credits</Text>
                                 <Text style={styles.retireHeaderSub}>
                                     {'Permanently burn '}{retireTarget?.amount}{' CC from "'}{retireTarget?.projectName}{'" on-chain.\nThis action is irreversible and creates a verifiable offset proof.'}
                                 </Text>
-                            </LinearGradient>
+                            </View>
 
                             {/* Purpose Selection */}
                             <Text style={styles.purposeLabel}>Why are you retiring?</Text>
@@ -334,89 +345,38 @@ const styles = StyleSheet.create({
         color: colors.textMuted,
         textAlign: 'center',
     },
-    grid: {
+    list: {
+        gap: 0,
+    },
+    tokenRow: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
+        alignItems: 'center',
         paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
     },
-    nftCardWrap: {
-        width: CARD_SIZE,
-        gap: 6,
-    },
-    nftCard: {
-        width: '100%',
-        height: CARD_SIZE * 1.2,
-        borderRadius: 16,
-        overflow: 'hidden',
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    retireBtn: {
+    tokenRowTouch: {
+        flex: 1,
         flexDirection: 'row',
+        alignItems: 'center',
+    },
+    tokenLogo: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, marginRight: 12 },
+    tokenMid: { flex: 1, gap: 2 },
+    tokenTicker: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+    tokenName: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+    tokenRight: { alignItems: 'flex-end', gap: 2, marginRight: 16 },
+    tokenBalance: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+    tokenUsd: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+    inlineRetireBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.redBg,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 5,
-        paddingVertical: 7,
-        borderRadius: 10,
         borderWidth: 1,
         borderColor: colors.red + '40',
-        backgroundColor: colors.redBg,
-    },
-    retireBtnText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: colors.red,
-    },
-    nftImage: {
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-    },
-    nftGradient: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '60%',
-    },
-    nftBadge: {
-        position: 'absolute',
-        top: 8,
-        left: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 3,
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(16, 185, 129, 0.3)',
-    },
-    nftBadgeText: {
-        fontSize: 9,
-        fontWeight: '700',
-        color: colors.green,
-    },
-    nftContent: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: 10,
-    },
-    nftTitle: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: colors.textPrimary,
-        marginBottom: 2,
-    },
-    nftAmount: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: colors.green,
     },
 
     // Modal

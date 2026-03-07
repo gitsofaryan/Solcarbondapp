@@ -7,9 +7,13 @@ import { useBlockchainStore } from '../store/blockchain-store';
 import { useWalletContext } from '../providers/WalletProvider';
 
 export const Header: React.FC = () => {
-    const { carbonCredits } = useBlockchainStore();
+    const { nftCertificates } = useBlockchainStore();
     const insets = useSafeAreaInsets();
     const wallet = useWalletContext();
+
+    // ── Derive CC balance from owned certificates ──
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress);
+    const myCCBalance = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
 
     return (
         <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
@@ -60,7 +64,7 @@ export const Header: React.FC = () => {
                 )}
                 <View style={[styles.pill, styles.ccPill]}>
                     <Ionicons name="leaf" size={11} color={colors.green} />
-                    <Text style={styles.pillValue}>{carbonCredits} CC</Text>
+                    <Text style={styles.pillValue}>{myCCBalance} CC</Text>
                 </View>
             </View>
         </View>
@@ -72,8 +76,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 10,
         backgroundColor: colors.background,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
         gap: 10,
     },
     topRow: {
@@ -89,10 +91,8 @@ const styles = StyleSheet.create({
     logoBg: {
         width: 32,
         height: 32,
-        borderRadius: 10,
-        backgroundColor: colors.greenBg,
-        borderWidth: 1,
-        borderColor: 'rgba(16, 185, 129, 0.25)',
+        borderRadius: 16, // Fully rounded
+        backgroundColor: 'rgba(45, 212, 191, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -127,10 +127,8 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 7,
-        borderRadius: 14,
-        backgroundColor: colors.greenBg,
-        borderWidth: 1,
-        borderColor: 'rgba(16, 185, 129, 0.3)',
+        borderRadius: 16,
+        backgroundColor: colors.card,
     },
     connectedDot: {
         width: 6,
@@ -139,9 +137,9 @@ const styles = StyleSheet.create({
         backgroundColor: colors.green,
     },
     connectedText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: colors.green,
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.textPrimary,
         fontFamily: 'monospace',
     },
     pills: {
@@ -154,17 +152,11 @@ const styles = StyleSheet.create({
         gap: 4,
         paddingHorizontal: 10,
         paddingVertical: 5,
-        borderRadius: 16,
-        borderWidth: 1,
+        borderRadius: 12,
+        backgroundColor: colors.card,
     },
-    solPill: {
-        backgroundColor: 'rgba(153, 69, 255, 0.1)',
-        borderColor: 'rgba(153, 69, 255, 0.2)',
-    },
-    ccPill: {
-        backgroundColor: colors.greenBg,
-        borderColor: 'rgba(16, 185, 129, 0.2)',
-    },
+    solPill: {},
+    ccPill: {},
     pillLabel: {
         fontSize: 12,
         fontWeight: '800',

@@ -1,15 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors } from '../theme/colors';
 
-// Use the new Premium Carbon Project Shareholding template
-const TEMPLATE_IMAGE = require('../../assets/carbon_certificate_v2.png');
-
-interface DynamicCertificateProps {
+export interface DynamicCertificateProps {
     projectName: string;
     amount: number;
     date: string;
     assetId?: string;
     holderAddress: string;
+    purchasingFirm?: string;
 }
 
 export const DynamicCertificate: React.FC<DynamicCertificateProps> = ({
@@ -17,140 +18,204 @@ export const DynamicCertificate: React.FC<DynamicCertificateProps> = ({
     amount,
     date,
     assetId,
-    holderAddress
+    holderAddress,
+    purchasingFirm = 'SolCarbon Individual',
 }) => {
-    // Format holder address for display (shorthand)
+    // Truncate address for display
     const displayAddress = holderAddress.length > 20
-        ? `${holderAddress.slice(0, 10)}...${holderAddress.slice(-10)}`
+        ? `${holderAddress.substring(0, 8)}...${holderAddress.substring(holderAddress.length - 8)}`
         : holderAddress;
 
+    const displayAssetId = assetId && assetId.length > 15
+        ? `${assetId.substring(0, 6)}...${assetId.substring(assetId.length - 6)}`
+        : assetId || 'PENDING';
+
     return (
-        <View style={styles.container}>
-            <Image
-                source={TEMPLATE_IMAGE}
-                style={styles.backgroundImage}
-                resizeMode="cover"
-            />
+        <View style={styles.cardContainer}>
+            <LinearGradient
+                colors={['#064e3b', '#065f46', '#022c22']}
+                style={styles.cardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                {/* Decorative Elements */}
+                <View style={styles.decorCircle1} />
+                <View style={styles.decorCircle2} />
 
-            <View style={styles.overlay}>
-                {/* Holder Name Field */}
-                <View style={styles.holderSection}>
-                    <Text style={styles.label}>[HOLDER NAME]</Text>
-                    <Text style={[styles.value, styles.holderText]}>{displayAddress}</Text>
-                </View>
-
-                {/* Project Name Field */}
-                <View style={styles.projectSection}>
-                    <Text style={styles.label}>PARTICULAR CARBON PROJECT NAME:</Text>
-                    <Text style={[styles.value, styles.projectText]}>{projectName}</Text>
-                </View>
-
-                <View style={styles.statsRow}>
-                    {/* Shares Owned Section */}
-                    <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>NUMBER OF SHARES OWNED</Text>
-                        <Text style={styles.statValue}>{amount.toLocaleString()}</Text>
+                <View style={styles.cardHeader}>
+                    <View>
+                        <MaterialCommunityIcons name="leaf" size={28} color={colors.green} />
+                        <Text style={styles.brandTitle}>SOLCARBON</Text>
                     </View>
-
-                    {/* Carbon Credits Section */}
-                    <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>CARBON CREDITS (tCO2e)</Text>
-                        <Text style={styles.statValue}>{(amount * 0.5).toFixed(1)} tCO2e</Text>
+                    <View style={styles.verifiedStamp}>
+                        <Ionicons name="shield-checkmark" size={16} color="#000" />
+                        <Text style={styles.verifiedText}>VERIFIED CC</Text>
                     </View>
                 </View>
 
-                {/* Footer Info */}
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>DATE: {date}</Text>
-                    {assetId && <Text style={styles.footerText}>ASSET ID: {assetId.slice(0, 15)}...</Text>}
+                <View style={styles.cardMain}>
+                    <Text style={styles.certLabel}>OFFICIAL CERTIFICATE OF RETIREMENT</Text>
+                    <Text style={styles.projectName} numberOfLines={1}>{projectName.toUpperCase()}</Text>
+
+                    <View style={styles.amountContainer}>
+                        <Text style={styles.amountValue}>{amount.toLocaleString()}</Text>
+                        <Text style={styles.amountUnit}>TONS CO2e</Text>
+                    </View>
                 </View>
-            </View>
+
+                <View style={styles.cardFooter}>
+                    <View style={styles.footerRow}>
+                        <View style={styles.footerItem}>
+                            <Text style={styles.footerLabel}>HOLDER</Text>
+                            <Text style={styles.footerValue}>{displayAddress}</Text>
+                        </View>
+                        <View style={[styles.footerItem, { alignItems: 'flex-end' }]}>
+                            <Text style={styles.footerLabel}>DATE</Text>
+                            <Text style={styles.footerValue}>{date}</Text>
+                        </View>
+                    </View>
+
+                    <View style={[styles.footerRow, { marginTop: 12 }]}>
+                        <View style={styles.footerItem}>
+                            <Text style={styles.footerLabel}>PURCHASING FIRM</Text>
+                            <Text style={styles.footerValue} numberOfLines={1}>{purchasingFirm}</Text>
+                        </View>
+                        <View style={[styles.footerItem, { alignItems: 'flex-end' }]}>
+                            <Text style={styles.footerLabel}>ASSET ID</Text>
+                            <Text style={styles.footerValue}>{displayAssetId}</Text>
+                        </View>
+                    </View>
+                </View>
+            </LinearGradient>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        width: 350,
-        height: 200,
-        borderRadius: 16,
+    cardContainer: {
+        width: '100%',
+        aspectRatio: 1.6,
+        borderRadius: 20,
         overflow: 'hidden',
         backgroundColor: '#000',
-        elevation: 10,
-        shadowColor: '#00FF00',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        ...Platform.select({
+            ios: {
+                boxShadow: `0 4px 6px rgba(0, 255, 0, 0.25)`,
+            },
+            android: {
+                elevation: 8,
+            },
+            web: {
+                boxShadow: '0 4px 12px rgba(0, 255, 0, 0.2)',
+            },
+        }),
     },
-    backgroundImage: {
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-    },
-    overlay: {
+    cardGradient: {
         flex: 1,
-        padding: 15,
+        padding: 24,
         justifyContent: 'space-between',
     },
-    holderSection: {
-        marginTop: 35,
-        marginLeft: 40,
+    decorCircle1: {
+        position: 'absolute',
+        top: -50,
+        right: -50,
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        backgroundColor: 'rgba(16, 185, 129, 0.05)',
     },
-    projectSection: {
-        marginLeft: 40,
-        marginTop: 5,
+    decorCircle2: {
+        position: 'absolute',
+        bottom: -30,
+        left: -30,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(52, 211, 153, 0.03)',
     },
-    label: {
-        color: '#00FF00',
-        fontSize: 8,
-        fontWeight: 'bold',
-        opacity: 0.8,
-    },
-    value: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
-        letterSpacing: 1,
-    },
-    holderText: {
-        color: '#fff',
-        fontSize: 11,
-    },
-    projectText: {
-        color: '#FFD700', // Gold for emphasis
-        fontSize: 10,
-    },
-    statsRow: {
+    cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 20,
-        paddingHorizontal: 30,
+        alignItems: 'flex-start',
     },
-    statBox: {
-        alignItems: 'center',
-        width: '45%',
-    },
-    statLabel: {
-        color: '#00FF00',
-        fontSize: 7,
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    statValue: {
+    brandTitle: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 2,
+        marginTop: 2,
+    },
+    verifiedStamp: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.green,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        gap: 4,
+    },
+    verifiedText: {
+        color: '#000',
+        fontSize: 10,
         fontWeight: '800',
     },
-    footer: {
+    cardMain: {
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    certLabel: {
+        color: colors.green,
+        fontSize: 8,
+        fontWeight: '700',
+        letterSpacing: 1.5,
+        marginBottom: 4,
+    },
+    projectName: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+        textAlign: 'center',
+    },
+    amountContainer: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 6,
+        marginTop: 4,
+    },
+    amountValue: {
+        color: '#fff',
+        fontSize: 32,
+        fontWeight: '900',
+    },
+    amountUnit: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    cardFooter: {
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.1)',
+        paddingTop: 16,
+    },
+    footerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 10,
-        paddingHorizontal: 10,
-        opacity: 0.6,
     },
-    footerText: {
-        color: '#00FF00',
-        fontSize: 6,
-        fontWeight: 'bold',
-    }
+    footerItem: {
+        flex: 1,
+    },
+    footerLabel: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 8,
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 2,
+    },
+    footerValue: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '700',
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
 });

@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { mockProjects } from '../data/mock-projects';
+import { verifiedProjects } from '../data/verified-projects';
 import { solToUsd } from '../utils/price';
 import { useWalletContext } from '../providers/WalletProvider';
 import { ProtocolInfoModal } from '../components/ProtocolInfoModal';
@@ -55,7 +55,7 @@ export const MarketplaceScreen: React.FC = () => {
     const [sortBy, setSortBy] = useState<'price' | 'change' | 'volume'>('change');
     const [protocolVisible, setProtocolVisible] = useState(false);
 
-    const sortedProjects = [...mockProjects].sort((a, b) => {
+    const sortedProjects = [...verifiedProjects].sort((a, b) => {
         if (sortBy === 'price') return b.pricePerCC - a.pricePerCC;
         if (sortBy === 'change') return b.change24h - a.change24h;
         return b.volume24h - a.volume24h;
@@ -68,7 +68,7 @@ export const MarketplaceScreen: React.FC = () => {
                 <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.title}>Carbon Markets</Text>
-                        <Text style={styles.subtitle}>{mockProjects.length} verified projects</Text>
+                        <Text style={styles.subtitle}>{verifiedProjects.length} verified projects</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.protocolBtn}
@@ -106,45 +106,19 @@ export const MarketplaceScreen: React.FC = () => {
                 {sortedProjects.map((project) => (
                     <TouchableOpacity
                         key={project.id}
-                        style={styles.tickerRow}
+                        style={styles.tokenRow}
                         onPress={() => navigation.navigate('ProjectDetail', { projectId: project.id })}
                         activeOpacity={0.7}
                     >
-                        <Image source={{ uri: project.image }} style={styles.tickerImage} />
-                        <View style={styles.tickerInfo}>
-                            <Text style={styles.tickerName} numberOfLines={1}>{project.name}</Text>
-                            <View style={styles.tickerMeta}>
-                                <View style={styles.typeBadge}>
-                                    <Text style={styles.typeText}>{project.type}</Text>
-                                </View>
-                                <Text style={styles.tickerSupply}>
-                                    {(project.availableCC / 1000).toFixed(1)}K avail
-                                </Text>
-                            </View>
+                        <Image source={{ uri: project.image }} style={styles.tokenLogo} />
+                        <View style={styles.tokenMid}>
+                            <Text style={styles.tokenTicker}>{project.symbol}</Text>
+                            <Text style={styles.tokenName} numberOfLines={1}>{project.name}</Text>
                         </View>
-                        <View style={styles.tickerRight}>
-                            <Text style={styles.tickerPrice}>◎ {project.pricePerCC.toFixed(3)}</Text>
-                            <Text style={styles.tickerUsd}>≈ ${solToUsd(project.pricePerCC).toFixed(2)}</Text>
-                            <Sparkline data={project.sparkline} positive={project.change24h >= 0} />
-                        </View>
-                        <View
-                            style={[
-                                styles.changeBadge,
-                                { backgroundColor: project.change24h >= 0 ? colors.greenBg : 'rgba(239,68,68,0.15)' },
-                            ]}
-                        >
-                            <Ionicons
-                                name={project.change24h >= 0 ? 'caret-up' : 'caret-down'}
-                                size={10}
-                                color={project.change24h >= 0 ? colors.green : '#EF4444'}
-                            />
-                            <Text
-                                style={[
-                                    styles.changeText,
-                                    { color: project.change24h >= 0 ? colors.green : '#EF4444' },
-                                ]}
-                            >
-                                {Math.abs(project.change24h).toFixed(1)}%
+                        <View style={styles.tokenRight}>
+                            <Text style={styles.tokenBalance}>◎ {project.pricePerCC.toFixed(3)}</Text>
+                            <Text style={[styles.tokenUsd, { color: project.change24h >= 0 ? colors.green : colors.red }]}>
+                                {project.change24h > 0 ? '+' : ''}{project.change24h.toFixed(2)}%
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -205,26 +179,12 @@ const styles = StyleSheet.create({
     },
     colName: { flex: 1, fontSize: 11, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
     colRight: { width: 70, fontSize: 11, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'right' },
-    tickerRow: {
-        flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-        paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 10,
-    },
-    tickerImage: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surface },
-    tickerInfo: { flex: 1 },
-    tickerName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 3 },
-    tickerMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    typeBadge: {
-        paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
-        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    },
-    typeText: { fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' },
-    tickerSupply: { fontSize: 10, color: colors.textMuted },
-    tickerRight: { alignItems: 'flex-end', gap: 2 },
-    tickerPrice: { fontSize: 15, fontWeight: '800', color: colors.textPrimary },
-    tickerUsd: { fontSize: 10, fontWeight: '600', color: colors.textMuted },
-    changeBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: 3,
-        paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, minWidth: 60, justifyContent: 'center',
-    },
-    changeText: { fontSize: 12, fontWeight: '800' },
+    tokenRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+    tokenLogo: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, marginRight: 12 },
+    tokenMid: { flex: 1, gap: 2 },
+    tokenTicker: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+    tokenName: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+    tokenRight: { alignItems: 'flex-end', gap: 2 },
+    tokenBalance: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+    tokenUsd: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
 });

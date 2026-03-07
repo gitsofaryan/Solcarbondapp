@@ -146,13 +146,51 @@ export const CertificateDetailScreen: React.FC = () => {
                         amount={cert.amount}
                         date={new Date(cert.mintDate).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' })}
                         assetId={cert.tokenId}
-                        holderAddress={wallet.publicKey?.toBase58() || 'SOL-DEV-ADDRESS'}
+                        holderAddress={wallet.walletAddress || ''}
+                        purchasingFirm={cert.purchasingFirm}
                     />
                 </View>
 
                 <Text style={styles.instruction}>
                     This NFT represents your ownership of verified carbon credits. You can hold them, sell them on the marketplace, or permanently retire them.
                 </Text>
+
+                <View style={styles.detailsCard}>
+                    <Text style={styles.detailsTitle}>ON-CHAIN DETAILS</Text>
+                    <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>On-Chain Asset / Tx</Text>
+                        <TouchableOpacity
+                            onPress={() => {
+                                const { Linking } = require('react-native');
+                                let target = cert.tokenId;
+                                if (target.startsWith('spl-')) target = target.split('-')[1];
+
+                                // Base64 fallback (old test data)
+                                if (target.endsWith('==')) {
+                                    Alert.alert('Old Test Data', 'This certificate is from an older test run.');
+                                    return;
+                                }
+
+                                // If length roughly matches signature length (88), it's a tx.
+                                // If it matches pubkey length (44), it's an address.
+                                const path = target.length > 70 ? 'tx' : 'address';
+                                Linking.openURL(`https://explorer.solana.com/${path}/${target}?cluster=devnet`);
+                            }}
+                        >
+                            <Text style={styles.signatureText} numberOfLines={2}>{cert.tokenId}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.explorerLink}
+                        onPress={() => {
+                            const { Linking } = require('react-native');
+                            Linking.openURL(`https://explorer.solana.com/address/${wallet.publicKey?.toBase58()}?cluster=devnet`);
+                        }}
+                    >
+                        <Ionicons name="open-outline" size={14} color={colors.blue} />
+                        <Text style={styles.explorerLinkText}>View All Minting Activity</Text>
+                    </TouchableOpacity>
+                </View>
 
             </View>
 
@@ -201,15 +239,12 @@ const styles = StyleSheet.create({
     },
     certificateWrapper: {
         width: '100%',
-        aspectRatio: 0.75, // Standard certificate ratio
+        aspectRatio: 1.6, // Horizontal Credit Card Ratio
         marginBottom: 24,
         ...Platform.select({
             web: { boxShadow: `0 10px 20px ${colors.green}26` },
             default: {
-                shadowColor: colors.green,
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.15,
-                shadowRadius: 20,
+                boxShadow: `0 10px 20px rgba(16, 185, 129, 0.15)`,
                 elevation: 10,
             }
         })
@@ -227,4 +262,52 @@ const styles = StyleSheet.create({
     retireBtn: { borderRadius: 16, overflow: 'hidden' },
     retireGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
     retireBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+    detailsCard: {
+        width: '100%',
+        backgroundColor: colors.card,
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 24,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    detailsTitle: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: colors.textMuted,
+        letterSpacing: 1.5,
+        marginBottom: 12,
+    },
+    detailRow: {
+        backgroundColor: colors.surface,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    detailLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: colors.textSecondary,
+        marginBottom: 4,
+    },
+    signatureText: {
+        fontSize: 11,
+        color: colors.blue,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
+    explorerLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        marginTop: 16,
+        paddingVertical: 8,
+    },
+    explorerLinkText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.blue,
+    },
 });

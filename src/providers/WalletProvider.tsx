@@ -209,6 +209,9 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 const signed = await signTransaction(tx);
                 const sig = await connection.sendRawTransaction(signed.serialize());
                 await connection.confirmTransaction(sig, 'confirmed');
+
+                // Refresh balance immediately after success
+                refreshBalance();
                 return sig;
             } finally {
                 setSending(false);
@@ -231,12 +234,39 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     useEffect(() => {
         if (publicKey) {
             refreshBalance();
-            const interval = setInterval(refreshBalance, 30000);
+            const interval = setInterval(refreshBalance, 10000); // 10s refresh for "Very Real" feel
             return () => clearInterval(interval);
         } else {
             setSolBalance(null);
         }
     }, [publicKey, refreshBalance]);
+
+    // ── Listen for account changes (Web) ──
+    useEffect(() => {
+        if (Platform.OS === 'web') {
+            const win = window as any;
+            const provider = win.phantom?.solana ?? win.solana ?? win.solflare;
+            if (provider?.on) {
+                const handleAccountChange = (newPublicKey: PublicKey | null) => {
+                    if (newPublicKey) {
+                        setPublicKey(new PublicKey(newPublicKey.toString()));
+                    } else {
+                        disconnect();
+                    }
+                };
+                provider.on('accountChanged', handleAccountChange);
+                provider.on('connect', (pk: PublicKey) => setPublicKey(new PublicKey(pk.toString())));
+                provider.on('disconnect', disconnect);
+                return () => {
+                    if (provider.removeListener) {
+                        provider.removeListener('accountChanged', handleAccountChange);
+                        provider.removeListener('connect', setPublicKey);
+                        provider.removeListener('disconnect', disconnect);
+                    }
+                };
+            }
+        }
+    }, [disconnect]);
 
     const value = useMemo(() => ({
         publicKey,

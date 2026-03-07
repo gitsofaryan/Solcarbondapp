@@ -15,21 +15,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/colors';
 import { useBlockchainStore } from '../store/blockchain-store';
 import { useWalletContext } from '../providers/WalletProvider';
-import { mockProjects } from '../data/mock-projects';
+import { verifiedProjects } from '../data/verified-projects';
 import { solToUsd } from '../utils/price';
 
 const { width } = Dimensions.get('window');
 
 export const DashboardScreen: React.FC = () => {
-    const { carbonCredits, nftCertificates, transactions } = useBlockchainStore();
+    const { nftCertificates, transactions } = useBlockchainStore();
     const wallet = useWalletContext();
     const navigation = useNavigation<any>();
 
-    const avgPrice = mockProjects.reduce((s, p) => s + p.pricePerCC, 0) / mockProjects.length;
-    const portfolioValueSOL = carbonCredits * avgPrice;
-    const totalSupply = mockProjects.reduce((s, p) => s + p.availableCC, 0);
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress);
+    const myCCBalance = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
 
-    const sorted = [...mockProjects].sort((a, b) => b.change24h - a.change24h);
+    const avgPrice = verifiedProjects.reduce((s, p) => s + p.pricePerCC, 0) / verifiedProjects.length;
+    const portfolioValueSOL = myCCBalance * avgPrice;
+    const totalSupply = verifiedProjects.reduce((s, p) => s + p.availableCC, 0);
+
+    const sorted = [...verifiedProjects].sort((a, b) => b.change24h - a.change24h);
     const topGainers = sorted.slice(0, 3);
     const recentTxs = transactions.slice(0, 3);
 
@@ -50,11 +53,11 @@ export const DashboardScreen: React.FC = () => {
                 <View style={styles.statsRow}>
                     <View style={styles.statPill}>
                         <Ionicons name="leaf" size={12} color={colors.green} />
-                        <Text style={styles.statPillText}>{carbonCredits} CC</Text>
+                        <Text style={styles.statPillText}>{myCCBalance} CC</Text>
                     </View>
                     <View style={styles.statPill}>
                         <MaterialCommunityIcons name="certificate" size={12} color={colors.blue} />
-                        <Text style={styles.statPillText}>{nftCertificates.length} NFTs</Text>
+                        <Text style={styles.statPillText}>{myCertificates.length} NFTs</Text>
                     </View>
                     {wallet.connected && wallet.solBalance !== null && (
                         <View style={styles.statPill}>
@@ -84,7 +87,7 @@ export const DashboardScreen: React.FC = () => {
                     style={styles.actionBtn}
                     activeOpacity={0.85}
                     onPress={() => {
-                        if (carbonCredits > 0) {
+                        if (myCCBalance > 0) {
                             navigation.navigate('SellProject');
                         } else {
                             Alert.alert('No Credits', 'You do not have any Carbon Credits to sell. Buy some from the Market first!');
@@ -162,7 +165,7 @@ export const DashboardScreen: React.FC = () => {
                     <View style={styles.marketDivider} />
                     <View style={styles.marketItem}>
                         <MaterialCommunityIcons name="package-variant" size={18} color={colors.green} />
-                        <Text style={styles.marketValue}>{mockProjects.length}</Text>
+                        <Text style={styles.marketValue}>{verifiedProjects.length}</Text>
                         <Text style={styles.marketLabel}>Projects</Text>
                     </View>
                     <View style={styles.marketDivider} />
@@ -185,7 +188,7 @@ export const DashboardScreen: React.FC = () => {
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.txProject}>{tx.projectName}</Text>
-                                <Text style={styles.txTime}>{tx.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+                                <Text style={styles.txTime}>{new Date(tx.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
                             </View>
                             <View style={{ alignItems: 'flex-end' }}>
                                 <Text style={[styles.txAmount, { color: tx.type === 'buy' ? colors.green : colors.amber }]}>

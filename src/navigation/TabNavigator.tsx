@@ -42,12 +42,13 @@ export const TabNavigator: React.FC = () => {
                         : tabIcons[route.name].inactive;
                     return <Ionicons name={iconName as any} size={22} color={color} />;
                 },
-                tabBarActiveTintColor: colors.green,
+                tabBarActiveTintColor: colors.textPrimary,
                 tabBarInactiveTintColor: colors.textMuted,
                 tabBarStyle: {
-                    backgroundColor: colors.card,
-                    borderTopColor: colors.border,
-                    borderTopWidth: 1,
+                    backgroundColor: colors.background,
+                    borderTopWidth: 0,
+                    elevation: 0,
+                    shadowOpacity: 0,
                     height: 70 + bottomPadding,
                     paddingBottom: bottomPadding > 0 ? bottomPadding : 10,
                     paddingTop: 8,

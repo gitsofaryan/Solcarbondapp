@@ -7,6 +7,7 @@ import {
 } from '@solana/web3.js';
 import {
     getAssociatedTokenAddress,
+    getAccount,
     createAssociatedTokenAccountInstruction,
     createMintToInstruction,
     createTransferInstruction,
@@ -16,6 +17,7 @@ import { TREASURY_SECRET_KEY, CC_TOKEN_MINT as MINT_ADDRESS } from '../utils/eco
 import { generateSigner, keypairIdentity, publicKey as umiPublicKey } from '@metaplex-foundation/umi';
 import { create as createCoreAsset, burn as burnCoreAsset, fetchAsset } from '@metaplex-foundation/mpl-core';
 import { getUmi, CC_TOKEN_MINT } from '../utils/solana';
+import bs58 from 'bs58';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export interface CarbonProject {
@@ -30,6 +32,7 @@ export interface CarbonProject {
     verified: boolean;
     rating: number;
     totalSupply: number;
+    symbol: string;
     change24h: number;
     change7d: number;
     volume24h: number;
@@ -41,10 +44,12 @@ export interface NFTCertificate {
     id: string;
     projectId: string;
     projectName: string;
+    purchasingFirm?: string;
     amount: number;
     mintDate: Date;
     tokenId: string;
     uri: string;
+    owner: string; // The wallet address that owns this certificate
 }
 
 export interface Transaction {
@@ -54,9 +59,12 @@ export interface Transaction {
     pricePerCC: number;
     totalSOL: number;
     projectName: string;
+    purchasingFirm?: string;
     timestamp: Date;
     signature: string;
     status: 'completed' | 'pending' | 'failed';
+    owner: string; // The wallet address that performed this transaction
+    explorerUrl?: string;
 }
 
 export interface Listing {
@@ -74,20 +82,20 @@ interface BlockchainState {
     isLoading: boolean;
     nftCertificates: NFTCertificate[];
 
-    buyCredits: (amount: number, pricePerCC: number, projectName: string, projectId: string, image: string, walletPublicKey?: string, signTransaction?: any) => Promise<{ signature: string; assetId?: string }>;
+    buyCredits: (amount: number, pricePerCC: number, projectName: string, projectId: string, image: string, walletPublicKey?: string, signTransaction?: any, purchasingFirm?: string) => Promise<{ signature: string; assetId?: string }>;
     sellCredits: (amount: number, pricePerCC: number, walletPublicKey?: string, signTransaction?: any) => Promise<string>;
     retireCredits: (certificateId: string, walletPublicKey?: string, signTransaction?: any) => Promise<string>;
+    refreshOnChainData: (walletPublicKey: string) => Promise<void>;
+    resetState: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getTreasuryKeypair = () => Keypair.fromSecretKey(new Uint8Array(TREASURY_SECRET_KEY));
 
-const generateSignature = () => {
-    const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let sig = '';
-    for (let i = 0; i < 88; i++) sig += chars[Math.floor(Math.random() * chars.length)];
-    return sig;
-};
+
+
+const getExplorerUrl = (signature: string, type: 'tx' | 'address' = 'tx') => 
+    `https://explorer.solana.com/${type}/${signature}?cluster=devnet`;
 
 /** Build a devnet Connection with a slightly higher timeout for stability */
 const makeConnection = () => new Connection(clusterApiUrl('devnet'), {
@@ -148,12 +156,28 @@ export const useBlockchainStore = create<BlockchainState>()(
             isLoading: false,
             nftCertificates: [],
 
+            resetState: () => {
+                set({
+                    carbonCredits: 0,
+                    transactions: [],
+                    listings: [],
+                    nftCertificates: [],
+                });
+            },
+
+            refreshOnChainData: async (walletPublicKey) => {
+                // We no longer fetch SPL token balance to avoid "ghost" numbers.
+                // Portfolio is now derived from NFT certificates in the UI.
+                if (!walletPublicKey) return;
+                console.log('[Sync] Refreshing data for:', walletPublicKey);
+            },
+
             // ── BUY ─────────────────────────────────────────────────────────
-            buyCredits: async (amount, pricePerCC, projectName, projectId, image, walletPublicKey, signTransaction) => {
+            buyCredits: async (amount, pricePerCC, projectName, projectId, image, walletPublicKey, signTransaction, purchasingFirm = 'Individual Collector') => {
                 set({ isLoading: true });
 
                 const totalSOL = amount * pricePerCC;
-                const fallbackSig = generateSignature();
+
 
                 // ── REAL ON-CHAIN PATH ──
                 if (walletPublicKey && signTransaction) {
@@ -240,9 +264,20 @@ export const useBlockchainStore = create<BlockchainState>()(
                                 name: `Carbon Certificate: ${projectName}`,
                                 uri: image,
                                 owner: umiPublicKey(walletPublicKey),
+                                plugins: [
+                                    {
+                                        type: 'Attributes',
+                                        attributeList: [
+                                            { key: 'Project', value: projectName },
+                                            { key: 'Amount', value: `${amount} CC` },
+                                            { key: 'Minter', value: walletPublicKey || 'Unknown' },
+                                            { key: 'Purchasing Firm', value: purchasingFirm || 'Individual' },
+                                        ],
+                                    },
+                                ],
                             }).sendAndConfirm(umi, { confirm: { commitment: 'confirmed' } });
 
-                            umiSig = Buffer.from(nftSig).toString('base64');
+                            umiSig = bs58.encode(nftSig);
                             console.log('[Umi] Core NFT confirmed:', umiSig.slice(0, 20) + '…');
                         } catch (nftErr: any) {
                             // NFT mint is non-critical — log and continue with SPL-only purchase
@@ -257,25 +292,32 @@ export const useBlockchainStore = create<BlockchainState>()(
                             pricePerCC,
                             totalSOL,
                             projectName,
+                            purchasingFirm,
                             timestamp: new Date(),
                             signature: mintSig,
                             status: 'completed',
+                            owner: walletPublicKey, // Identity scoping
+                            explorerUrl: getExplorerUrl(mintSig),
                         };
 
                         set(state => ({
-                            carbonCredits: state.carbonCredits + amount,
                             nftCertificates: [{
                                 id: `nft-${Date.now()}`,
                                 projectId,
                                 projectName,
+                                purchasingFirm,
                                 amount,
                                 uri: image,
-                                tokenId: umiSig || `spl-${mintSig.slice(0, 16)}`,
+                                tokenId: umiSig || mintSig,
                                 mintDate: new Date(),
+                                owner: walletPublicKey, // Identity scoping
                             }, ...state.nftCertificates],
                             transactions: [txRecord, ...state.transactions],
                             isLoading: false,
                         }));
+
+                        // Sync real balance immediately after
+                        get().refreshOnChainData(walletPublicKey);
 
                         return { signature: mintSig, assetId: umiSig };
 
@@ -286,34 +328,8 @@ export const useBlockchainStore = create<BlockchainState>()(
                     }
                 }
 
-                // ── SIMULATION PATH (no wallet connected) ──
-                await new Promise(r => setTimeout(r, 1500));
-                const txRecord: Transaction = {
-                    id: Date.now().toString(),
-                    type: 'buy',
-                    amount,
-                    pricePerCC,
-                    totalSOL,
-                    projectName,
-                    timestamp: new Date(),
-                    signature: fallbackSig,
-                    status: 'completed',
-                };
-                set(state => ({
-                    carbonCredits: state.carbonCredits + amount,
-                    nftCertificates: [{
-                        id: `nft-${Date.now()}`,
-                        projectId,
-                        projectName,
-                        amount,
-                        uri: image,
-                        tokenId: `mock-${Date.now()}`,
-                        mintDate: new Date(),
-                    }, ...state.nftCertificates],
-                    transactions: [txRecord, ...state.transactions],
-                    isLoading: false,
-                }));
-                return { signature: fallbackSig };
+                set({ isLoading: false });
+                throw new Error('Wallet not connected. Real Devnet transaction required.');
             },
 
             // ── SELL ─────────────────────────────────────────────────────────
@@ -327,7 +343,7 @@ export const useBlockchainStore = create<BlockchainState>()(
                 }
 
                 const totalSOL = amount * pricePerCC;
-                const fallbackSig = generateSignature();
+
 
                 if (walletPublicKey && signTransaction) {
                     try {
@@ -406,7 +422,6 @@ export const useBlockchainStore = create<BlockchainState>()(
                         };
 
                         set(s => ({
-                            carbonCredits: s.carbonCredits - amount,
                             transactions: [{
                                 id: Date.now().toString(),
                                 type: 'sell',
@@ -417,10 +432,15 @@ export const useBlockchainStore = create<BlockchainState>()(
                                 timestamp: new Date(),
                                 signature: ccSig,
                                 status: 'completed',
+                                owner: walletPublicKey, // Identity scoping
+                                explorerUrl: getExplorerUrl(ccSig),
                             }, ...s.transactions],
                             listings: [listing, ...s.listings],
                             isLoading: false,
                         }));
+
+                        // Sync real balance immediately after
+                        get().refreshOnChainData(walletPublicKey);
 
                         return ccSig;
                     } catch (e: any) {
@@ -430,22 +450,8 @@ export const useBlockchainStore = create<BlockchainState>()(
                     }
                 }
 
-                // Simulation
-                await new Promise(r => setTimeout(r, 1000));
-                const listing: Listing = {
-                    id: Date.now().toString(), sellerId: 'user', amount, pricePerCC, createdAt: new Date(),
-                };
-                set(s => ({
-                    carbonCredits: s.carbonCredits - amount,
-                    transactions: [{
-                        id: Date.now().toString(), type: 'sell', amount, pricePerCC, totalSOL,
-                        projectName: 'Listed on Marketplace', timestamp: new Date(),
-                        signature: fallbackSig, status: 'completed',
-                    }, ...s.transactions],
-                    listings: [listing, ...s.listings],
-                    isLoading: false,
-                }));
-                return fallbackSig;
+                set({ isLoading: false });
+                throw new Error('Wallet not connected. Real Devnet transaction required.');
             },
 
             // ── RETIRE ───────────────────────────────────────────────────────
@@ -489,7 +495,7 @@ export const useBlockchainStore = create<BlockchainState>()(
                         burnSig = splBurnSig;
 
                         // ── Step 2: Burn Metaplex Core NFT (if real tokenId) ──
-                        if (cert.tokenId && !cert.tokenId.startsWith('mock-') && !cert.tokenId.startsWith('spl-')) {
+                        if (cert.tokenId && !cert.tokenId.startsWith('spl-')) {
                             try {
                                 const umi = getUmi();
                                 const treasuryKp = getTreasuryKeypair();
@@ -510,15 +516,14 @@ export const useBlockchainStore = create<BlockchainState>()(
                         throw new Error(e.message || 'Retirement failed on devnet');
                     }
                 } else {
-                    // Simulation delay
-                    await new Promise(r => setTimeout(r, 1200));
-                    burnSig = generateSignature();
+                    set({ isLoading: false });
+                    throw new Error('Wallet not connected. Real Devnet transaction required.');
                 }
 
-                const sig = burnSig || generateSignature();
+                const sig = burnSig;
+
 
                 set(s => ({
-                    carbonCredits: s.carbonCredits - cert.amount,
                     nftCertificates: s.nftCertificates.filter(c => c.id !== certificateId),
                     transactions: [{
                         id: Date.now().toString(),
@@ -530,9 +535,14 @@ export const useBlockchainStore = create<BlockchainState>()(
                         timestamp: new Date(),
                         signature: sig,
                         status: 'completed',
+                        owner: walletPublicKey || '', // Identity scoping
+                        explorerUrl: getExplorerUrl(sig),
                     }, ...s.transactions],
                     isLoading: false,
                 }));
+
+                // Sync real balance immediately after
+                get().refreshOnChainData(walletPublicKey);
 
                 return sig;
             },
@@ -541,7 +551,6 @@ export const useBlockchainStore = create<BlockchainState>()(
             name: 'solcarbon-blockchain-storage',
             storage: createJSONStorage(() => AsyncStorage),
             partialize: (state) => ({
-                carbonCredits: state.carbonCredits,
                 transactions: state.transactions,
                 listings: state.listings,
                 nftCertificates: state.nftCertificates,

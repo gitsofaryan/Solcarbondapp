@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ export const ConfirmationScreen: React.FC = () => {
         totalCostSOL = 0,
         assetId = 'PENDING...',
         signature = '',
+        purchasingFirm = 'Individual Collector',
     } = route.params || {};
 
     // Get current date formatted
@@ -33,13 +34,13 @@ export const ConfirmationScreen: React.FC = () => {
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 600,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.spring(slideAnim, {
                 toValue: 0,
                 friction: 8,
                 tension: 40,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             })
         ]).start();
     }, []);
@@ -92,7 +93,8 @@ export const ConfirmationScreen: React.FC = () => {
                         amount={amount}
                         date={dateStr}
                         assetId={assetId}
-                        holderAddress={wallet.publicKey ? wallet.publicKey.toString() : 'SOL-DEV-ADDRESS'}
+                        holderAddress={wallet.walletAddress || ''}
+                        purchasingFirm={purchasingFirm}
                     />
                 </Animated.View>
 
