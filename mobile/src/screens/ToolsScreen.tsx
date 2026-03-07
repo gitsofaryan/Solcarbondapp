@@ -6,14 +6,20 @@ import {
     ScrollView,
     TouchableOpacity,
     TextInput,
-    Modal,
     Alert,
     Dimensions,
     ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
+import { useBlockchainStore } from '../store/blockchain-store';
+import { useWalletContext } from '../providers/WalletProvider';
+import { mockProjects } from '../data/mock-projects';
+
+// Cheapest available project — used as default for offset purchases
+const OFFSET_PROJECT = [...mockProjects].sort((a, b) => a.pricePerCC - b.pricePerCC)[0];
 
 const { width } = Dimensions.get('window');
 
@@ -66,7 +72,11 @@ function tonne(kgPerYear: number) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export const ToolsScreen: React.FC = () => {
+    const navigation = useNavigation<any>();
+    const wallet = useWalletContext();
+    const { buyCredits, isLoading } = useBlockchainStore();
     const [activeSection, setActiveSection] = useState<'home' | 'msme' | 'brsr' | 'offset'>('home');
+    const [buying, setBuying] = useState(false);
 
     // MSME Wizard state
     const [wizardStep, setWizardStep] = useState(0);
@@ -88,6 +98,44 @@ export const ToolsScreen: React.FC = () => {
     // Offset calculator
     const [customCC, setCustomCC] = useState('');
     const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
+
+    // ── Real buy handler — same flow as Market → ProjectDetail → Buy ──
+    const handleBuy = async (ccAmount: number, label: string) => {
+        if (!wallet.connected) {
+            wallet.openConnectModal();
+            return;
+        }
+        if (ccAmount <= 0) {
+            Alert.alert('Invalid Amount', 'Please enter a valid CC amount.');
+            return;
+        }
+        setBuying(true);
+        try {
+            const project = OFFSET_PROJECT;
+            const totalCostSOL = ccAmount * project.pricePerCC;
+            const result = await buyCredits(
+                ccAmount,
+                project.pricePerCC,
+                project.name,
+                project.id,
+                project.image,
+                wallet.publicKey?.toBase58(),
+                wallet.signTransaction,
+            );
+            wallet.refreshBalance();
+            navigation.navigate('Confirmation', {
+                amount: ccAmount,
+                projectName: project.name,
+                totalCostSOL,
+                assetId: result?.assetId || 'SPL_ONLY',
+                signature: result?.signature || '',
+            });
+        } catch (err: any) {
+            Alert.alert('Purchase Failed', err.message || 'Transaction failed. Try again.');
+        } finally {
+            setBuying(false);
+        }
+    };
 
     // ── MSME Wizard Logic ──
     const computeWizardResult = () => {
@@ -312,14 +360,17 @@ export const ToolsScreen: React.FC = () => {
                         </View>
 
                         <TouchableOpacity
-                            style={styles.buyBtn}
+                            style={[styles.buyBtn, buying && { opacity: 0.6 }]}
                             activeOpacity={0.85}
-                            onPress={() => Alert.alert(
-                                '✅ Offset Initiated (Demo)',
-                                `This would purchase ${ccAmount} CC (~₹${totalINR}) from the cheapest verified Indian project and permanently retire them on-chain.\n\nIn production, this connects to your Phantom wallet.`,
-                            )}
+                            disabled={buying}
+                            onPress={() => handleBuy(ccAmount, 'Fractional Offset')}
                         >
-                            <Text style={styles.buyBtnText}>Offset {ccAmount} CC Now →</Text>
+                            {buying
+                                ? <ActivityIndicator color="#000" />
+                                : <Text style={styles.buyBtnText}>
+                                    {wallet.connected ? `Offset ${ccAmount} CC Now →` : '🔗 Connect Wallet to Buy'}
+                                </Text>
+                            }
                         </TouchableOpacity>
                     </LinearGradient>
                 )}
@@ -391,17 +442,24 @@ export const ToolsScreen: React.FC = () => {
                         return (
                             <TouchableOpacity
                                 key={i}
-                                style={styles.pkgCard}
+                                style={[styles.pkgCard, buying && { opacity: 0.6 }]}
                                 activeOpacity={0.85}
-                                onPress={() => Alert.alert(`${pkg.label} (Demo)`, `Purchase ${cc} CC for ₹${inr.toLocaleString()}\n\nIn production this routes to the marketplace with the amount pre-filled.`)}
+                                disabled={buying}
+                                onPress={() => handleBuy(cc, pkg.label)}
                             >
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.pkgLabel}>{pkg.label}</Text>
                                     <Text style={styles.pkgSub}>{cc} CC · {Math.round(pkg.pct * 100)}% offset</Text>
                                 </View>
-                                <View>
+                                <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={[styles.pkgINR, { color: pkg.color }]}>₹{inr.toLocaleString()}</Text>
                                     <Text style={styles.pkgUSD}>≈ ${(inr / 84).toFixed(0)}</Text>
+                                    {buying
+                                        ? <ActivityIndicator size="small" color={pkg.color} style={{ marginTop: 4 }} />
+                                        : <Text style={[styles.pkgUSD, { color: colors.blue, marginTop: 2 }]}>
+                                            {wallet.connected ? 'Tap to buy →' : '🔗 Connect wallet'}
+                                        </Text>
+                                    }
                                 </View>
                             </TouchableOpacity>
                         );

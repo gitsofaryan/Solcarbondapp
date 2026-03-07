@@ -77,14 +77,15 @@ const timeRanges = ['1D', '1W', '1M', '3M', 'ALL'] as const;
 
 interface ProjectDetailScreenProps {
     projectId: string;
+    prefilledAmount?: number;
     onBack: () => void;
 }
 
-export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projectId, onBack }) => {
+export const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({ projectId, prefilledAmount, onBack }) => {
     const navigation = useNavigation<any>();
     const { buyCredits, sellCredits, carbonCredits, isLoading } = useBlockchainStore();
     const wallet = useWalletContext();
-    const [buyAmount, setBuyAmount] = useState(10);
+    const [buyAmount, setBuyAmount] = useState(prefilledAmount ?? 10);
     const [activeRange, setActiveRange] = useState<typeof timeRanges[number]>('1W');
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
 
