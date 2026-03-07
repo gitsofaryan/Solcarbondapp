@@ -20,6 +20,9 @@ export const verifiedProjects: CarbonProject[] = [
     volume24h: 425,
     marketCap: 850,
     sparkline: [0.078, 0.080, 0.079, 0.083, 0.082, 0.084, 0.085],
+    registry: 'Gold Standard GS8273',
+    methodology: 'ACM0002: Grid-connected electricity generation from renewable sources',
+    lastAudit: '2025-11-15',
   },
   {
     id: '2',
@@ -39,6 +42,9 @@ export const verifiedProjects: CarbonProject[] = [
     volume24h: 289,
     marketCap: 960,
     sparkline: [0.11, 0.115, 0.112, 0.118, 0.122, 0.119, 0.12],
+    registry: 'Verra VCS 1928',
+    methodology: 'VM0033: Methodology for Tidal Wetland and Seagrass Restoration',
+    lastAudit: '2026-01-10',
   },
   {
     id: '3',

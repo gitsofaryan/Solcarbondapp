@@ -5,10 +5,10 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-sol_carbon = "Carbon1111111111111111111111111111111111111"
+sol_carbon = "CUmu7iSDj5RavATJnm2Xsrvkjo7iqAb7MeT3GVsgmg7o"
 
 [programs.devnet]
-sol_carbon = "Carbon1111111111111111111111111111111111111"
+sol_carbon = "CUmu7iSDj5RavATJnm2Xsrvkjo7iqAb7MeT3GVsgmg7o"
 
 [registry]
 url = "https://api.apr.dev"

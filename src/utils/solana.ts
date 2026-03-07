@@ -1,21 +1,25 @@
-import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
-import { mplCore } from '@metaplex-foundation/mpl-core';
-import { clusterApiUrl } from '@solana/web3.js';
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
+import { mplCore } from "@metaplex-foundation/mpl-core";
+import { clusterApiUrl } from "@solana/web3.js";
 
 // Initialize Umi for Devnet
 export const getUmi = () => {
-  const umi = createUmi(clusterApiUrl('devnet'));
+  const umi = createUmi(clusterApiUrl("devnet"));
   umi.use(mplCore());
   return umi;
 };
 
 // Hardcoded for Devnet (you would generate this once and save it)
 // We will generate a real one in the next step and paste it here
-export const CC_TOKEN_MINT = 'HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa';
+export const CC_TOKEN_MINT = "HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa";
+
+// SKR — Solana Mobile ecosystem token (mainnet)
+// Official CA from https://www.solanamobile.com/skr
+export const SKR_TOKEN_MINT = "SKRtRYQEhfQ47gCA6hcyqXjBRJJpZgKGnoiSmJPXB3s";
 
 // Official IPFS URIs for NFT metadata since we aren't uploading real files yet
 export const OFFICIAL_PROJECT_URIS = {
-  RajasthanWind: 'https://arweave.net/official_r_wind',
-  AssamBamboo: 'https://arweave.net/official_a_bamboo',
-  GujaratSolar: 'https://arweave.net/official_g_solar',
+  RajasthanWind: "https://arweave.net/official_r_wind",
+  AssamBamboo: "https://arweave.net/official_a_bamboo",
+  GujaratSolar: "https://arweave.net/official_g_solar",
 };
