@@ -25,7 +25,7 @@ export const DashboardScreen: React.FC = () => {
     const wallet = useWalletContext();
     const navigation = useNavigation<any>();
 
-    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress);
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress && c.amount > 0);
     const myCCBalance = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
 
     const avgPrice = verifiedProjects.reduce((s, p) => s + p.pricePerCC, 0) / verifiedProjects.length;

@@ -7,7 +7,6 @@ import {
 } from '@solana/web3.js';
 import {
     getAssociatedTokenAddress,
-    getAccount,
     createAssociatedTokenAccountInstruction,
     createMintToInstruction,
     createTransferInstruction,
@@ -92,8 +91,6 @@ interface BlockchainState {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getTreasuryKeypair = () => Keypair.fromSecretKey(new Uint8Array(TREASURY_SECRET_KEY));
-
-
 
 const getExplorerUrl = (signature: string, type: 'tx' | 'address' = 'tx') => 
     `https://explorer.solana.com/${type}/${signature}?cluster=devnet`;
@@ -207,14 +204,31 @@ export const useBlockchainStore = create<BlockchainState>()(
                             mintDate: new Date(), // We don't have exact block time here, using current as fallback
                             owner: walletPublicKey,
                         };
-                    });
+                    }).filter(c => c.amount > 0);
 
-                    // 4. Update the store - replace existing certs for THIS wallet
+                    // 4. Update the store - Merge truth from blockchain with unindexed local certs
                     set(state => {
-                        // Keep certs from other wallets (if any were persisted) but replace current wallet's truth
                         const otherWalletCerts = state.nftCertificates.filter(c => c.owner !== walletPublicKey);
+                        const currentWalletLocalCerts = state.nftCertificates.filter(c => c.owner === walletPublicKey);
+                        
+                        // Rule: Keep local certs that are NOT yet on chain IF they are younger than 2 minutes
+                        // (handles RPC indexing lag while still allowing on-chain truth to eventually take over)
+                        const now = Date.now();
+                        const unindexedRecentCerts = currentWalletLocalCerts.filter(local => {
+                            const isOnChain = fetchedCerts.some(f => f.tokenId === local.tokenId);
+                            const ageMs = now - (local.mintDate instanceof Date ? local.mintDate.getTime() : new Date(local.mintDate).getTime());
+                            return !isOnChain && ageMs < 120_000; // 2 minutes grace period
+                        });
+
+                        const finalCerts = [...fetchedCerts, ...unindexedRecentCerts, ...otherWalletCerts];
+                        
+                        // Deriving numeric balance from certificates truth
+                        const activeWalletCerts = finalCerts.filter(c => c.owner === walletPublicKey);
+                        const totalCC = activeWalletCerts.reduce((sum, c) => sum + c.amount, 0);
+
                         return {
-                            nftCertificates: [...fetchedCerts, ...otherWalletCerts],
+                            nftCertificates: finalCerts,
+                            carbonCredits: totalCC,
                         };
                     });
 
@@ -228,7 +242,6 @@ export const useBlockchainStore = create<BlockchainState>()(
                 set({ isLoading: true });
 
                 const totalSOL = amount * pricePerCC;
-
 
                 // ── REAL ON-CHAIN PATH ──
                 if (walletPublicKey && signTransaction) {
@@ -300,6 +313,7 @@ export const useBlockchainStore = create<BlockchainState>()(
 
                         // ── Step 3: Metaplex Core NFT certificate ──
                         let umiSig = '';
+                        let assetPk = '';
                         try {
                             const umi = getUmi();
                             const treasurySigner = keypairIdentity(
@@ -308,7 +322,8 @@ export const useBlockchainStore = create<BlockchainState>()(
                             umi.use(treasurySigner);
 
                             const assetSigner = generateSigner(umi);
-                            console.log('[Umi] Minting Core NFT:', assetSigner.publicKey);
+                            assetPk = assetSigner.publicKey.toString();
+                            console.log('[Umi] Minting Core NFT:', assetPk);
 
                             const { signature: nftSig } = await createCoreAsset(umi, {
                                 asset: assetSigner,
@@ -331,7 +346,6 @@ export const useBlockchainStore = create<BlockchainState>()(
                             umiSig = bs58.encode(nftSig);
                             console.log('[Umi] Core NFT confirmed:', umiSig.slice(0, 20) + '…');
                         } catch (nftErr: any) {
-                            // NFT mint is non-critical — log and continue with SPL-only purchase
                             console.warn('[Umi] NFT mint failed (non-fatal):', nftErr.message);
                         }
 
@@ -351,26 +365,34 @@ export const useBlockchainStore = create<BlockchainState>()(
                             explorerUrl: getExplorerUrl(mintSig),
                         };
 
-                        set(state => ({
-                            nftCertificates: [{
-                                id: `nft-${Date.now()}`,
-                                projectId,
-                                projectName,
-                                purchasingFirm,
-                                amount,
-                                uri: image,
-                                tokenId: umiSig || mintSig,
-                                mintDate: new Date(),
-                                owner: walletPublicKey, // Identity scoping
-                            }, ...state.nftCertificates],
-                            transactions: [txRecord, ...state.transactions],
+                        const currentStore = get();
+                        const assetPublicKeyStr = assetPk || mintSig;
+                        const newCerts = [{
+                            id: `nft-${Date.now()}`,
+                            projectId,
+                            projectName,
+                            purchasingFirm,
+                            amount,
+                            uri: image,
+                            tokenId: assetPublicKeyStr,
+                            mintDate: new Date(),
+                            owner: walletPublicKey, // Identity scoping
+                        }, ...currentStore.nftCertificates];
+
+                        // Recalculate balance for numeric state
+                        const totalCC = newCerts.filter(c => c.owner === walletPublicKey).reduce((sum, c) => sum + c.amount, 0);
+
+                        set({
+                            nftCertificates: newCerts,
+                            transactions: [txRecord, ...currentStore.transactions],
+                            carbonCredits: totalCC,
                             isLoading: false,
-                        }));
+                        });
 
                         // Sync real balance immediately after
                         get().refreshOnChainData(walletPublicKey);
 
-                        return { signature: mintSig, assetId: umiSig };
+                        return { signature: mintSig, assetId: assetPublicKeyStr };
 
                     } catch (e: any) {
                         console.error('[Buy] On-chain transaction failed:', e.message);
@@ -388,13 +410,13 @@ export const useBlockchainStore = create<BlockchainState>()(
                 set({ isLoading: true });
                 const state = get();
 
+                // Check balance against numeric state (which is derived from truth)
                 if (amount > state.carbonCredits) {
                     set({ isLoading: false });
-                    throw new Error('Insufficient carbon credits');
+                    throw new Error(`Insufficient carbon credits (Have ${state.carbonCredits}, Need ${amount})`);
                 }
 
                 const totalSOL = amount * pricePerCC;
-
 
                 if (walletPublicKey && signTransaction) {
                     try {
@@ -573,24 +595,31 @@ export const useBlockchainStore = create<BlockchainState>()(
 
                 const sig = burnSig;
 
+                set(s => {
+                    const finalCerts = s.nftCertificates.filter(c => c.id !== certificateId);
+                    const totalCC = finalCerts
+                        .filter(c => c.owner === (walletPublicKey || ''))
+                        .reduce((sum, c) => sum + c.amount, 0);
 
-                set(s => ({
-                    nftCertificates: s.nftCertificates.filter(c => c.id !== certificateId),
-                    transactions: [{
-                        id: Date.now().toString(),
-                        type: 'retire',
-                        amount: cert.amount,
-                        pricePerCC: 0,
-                        totalSOL: 0,
-                        projectName: cert.projectName,
-                        timestamp: new Date(),
-                        signature: sig,
-                        status: 'completed',
-                        owner: walletPublicKey || '', // Identity scoping
-                        explorerUrl: getExplorerUrl(sig),
-                    }, ...s.transactions],
-                    isLoading: false,
-                }));
+                    return {
+                        nftCertificates: finalCerts,
+                        carbonCredits: totalCC,
+                        transactions: [{
+                            id: Date.now().toString(),
+                            type: 'retire',
+                            amount: cert.amount,
+                            pricePerCC: 0,
+                            totalSOL: 0,
+                            projectName: cert.projectName,
+                            timestamp: new Date(),
+                            signature: sig,
+                            status: 'completed',
+                            owner: walletPublicKey || '', // Identity scoping
+                            explorerUrl: getExplorerUrl(sig),
+                        }, ...s.transactions],
+                        isLoading: false,
+                    };
+                });
 
                 // Sync real balance immediately after
                 get().refreshOnChainData(walletPublicKey);

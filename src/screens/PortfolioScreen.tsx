@@ -41,7 +41,7 @@ export const PortfolioScreen: React.FC = () => {
     const [retiring, setRetiring] = useState(false);
 
     // ── Filter data by current wallet identity ──
-    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress);
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress && c.amount > 0);
     const myTransactions = transactions.filter(t => t.owner === wallet.walletAddress);
 
     // ── Derive CC balance from owned certificates ──
