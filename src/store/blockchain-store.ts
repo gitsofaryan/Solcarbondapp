@@ -12,14 +12,19 @@ import {
     createTransferInstruction,
     createBurnInstruction,
 } from '@solana/spl-token';
-import { TREASURY_SECRET_KEY, CC_TOKEN_MINT as MINT_ADDRESS } from '../utils/ecosystem';
+import { getTreasurySecretKey } from '../utils/ecosystem';
 import { generateSigner, keypairIdentity, publicKey as umiPublicKey } from '@metaplex-foundation/umi';
 import { create as createCoreAsset, burn as burnCoreAsset, fetchAsset, fetchAssetsByOwner } from '@metaplex-foundation/mpl-core';
-import { getUmi, CC_TOKEN_MINT } from '../utils/solana';
+import { getUmi } from '../utils/solana';
 import { verifiedProjects } from '../data/verified-projects';
+import { SOLANA_NETWORK, CC_TOKEN_MINT, EXPLORER_BASE_URL } from '../constants';
 import bs58 from 'bs58';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+/** Callback that asks the connected wallet to sign a transaction. */
+export type SignTransaction = (tx: Web3Tx) => Promise<Web3Tx>;
+
 export interface CarbonProject {
     id: string;
     name: string;
@@ -82,24 +87,40 @@ interface BlockchainState {
     isLoading: boolean;
     nftCertificates: NFTCertificate[];
 
-    buyCredits: (amount: number, pricePerCC: number, projectName: string, projectId: string, image: string, walletPublicKey?: string, signTransaction?: any, purchasingFirm?: string) => Promise<{ signature: string; assetId?: string }>;
-    sellCredits: (amount: number, pricePerCC: number, walletPublicKey?: string, signTransaction?: any) => Promise<string>;
-    retireCredits: (certificateId: string, walletPublicKey?: string, signTransaction?: any) => Promise<string>;
+    buyCredits: (amount: number, pricePerCC: number, projectName: string, projectId: string, image: string, walletPublicKey?: string, signTransaction?: SignTransaction, purchasingFirm?: string) => Promise<{ signature: string; assetId?: string }>;
+    sellCredits: (amount: number, pricePerCC: number, walletPublicKey?: string, signTransaction?: SignTransaction) => Promise<string>;
+    retireCredits: (certificateId: string, walletPublicKey?: string, signTransaction?: SignTransaction) => Promise<string>;
     refreshOnChainData: (walletPublicKey: string) => Promise<void>;
     resetState: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const getTreasuryKeypair = () => Keypair.fromSecretKey(new Uint8Array(TREASURY_SECRET_KEY));
+const getTreasuryKeypair = () => Keypair.fromSecretKey(getTreasurySecretKey());
 
-const getExplorerUrl = (signature: string, type: 'tx' | 'address' = 'tx') => 
-    `https://explorer.solana.com/${type}/${signature}?cluster=devnet`;
+const getExplorerUrl = (signature: string, type: 'tx' | 'address' = 'tx') =>
+    `${EXPLORER_BASE_URL}/${type}/${signature}?cluster=${SOLANA_NETWORK}`;
 
-/** Build a devnet Connection with a slightly higher timeout for stability */
-const makeConnection = () => new Connection(clusterApiUrl('devnet'), {
+/** Build a Solana Connection with a slightly higher timeout for stability */
+const makeConnection = () => new Connection(clusterApiUrl(SOLANA_NETWORK), {
     commitment: 'confirmed',
     confirmTransactionInitialTimeout: 60_000,
 });
+
+/**
+ * Validate amount and price inputs for buy/sell operations.
+ * Throws a descriptive error on invalid input.
+ */
+function validateCreditOperation(amount: number, pricePerCC: number): void {
+    if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Amount must be a positive number.');
+    }
+    if (!Number.isInteger(amount)) {
+        throw new Error('Amount must be a whole number of Carbon Credits.');
+    }
+    if (!Number.isFinite(pricePerCC) || pricePerCC <= 0) {
+        throw new Error('Invalid price per credit.');
+    }
+}
 
 /**
  * Send a transaction and retry up to `retries` times on
@@ -239,6 +260,8 @@ export const useBlockchainStore = create<BlockchainState>()(
 
             // ── BUY ─────────────────────────────────────────────────────────
             buyCredits: async (amount, pricePerCC, projectName, projectId, image, walletPublicKey, signTransaction, purchasingFirm = 'Individual Collector') => {
+                validateCreditOperation(amount, pricePerCC);
+
                 set({ isLoading: true });
 
                 const totalSOL = amount * pricePerCC;
@@ -407,6 +430,8 @@ export const useBlockchainStore = create<BlockchainState>()(
 
             // ── SELL ─────────────────────────────────────────────────────────
             sellCredits: async (amount, pricePerCC, walletPublicKey, signTransaction) => {
+                validateCreditOperation(amount, pricePerCC);
+
                 set({ isLoading: true });
                 const state = get();
 

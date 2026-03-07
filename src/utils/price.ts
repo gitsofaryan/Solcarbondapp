@@ -1,6 +1,8 @@
 // SOL to USD conversion rate
 // In production, fetch this from a price feed (e.g., Pyth, Jupiter, CoinGecko)
-export const SOL_USD_RATE = 140; // 1 SOL ≈ $140 USD
+import { SOL_USD_RATE } from '../constants';
+
+export { SOL_USD_RATE };
 
 export const solToUsd = (sol: number): number => sol * SOL_USD_RATE;
 

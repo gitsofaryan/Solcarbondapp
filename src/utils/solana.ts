@@ -1,17 +1,17 @@
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { mplCore } from '@metaplex-foundation/mpl-core';
 import { clusterApiUrl } from '@solana/web3.js';
+import { SOLANA_NETWORK, CC_TOKEN_MINT, EXPLORER_BASE_URL } from '../constants';
 
-// Initialize Umi for Devnet
+// Re-export so callers that import these from here keep working.
+export { CC_TOKEN_MINT, EXPLORER_BASE_URL };
+
+/** Initialize a Umi instance for the configured Solana network. */
 export const getUmi = () => {
-  const umi = createUmi(clusterApiUrl('devnet'));
+  const umi = createUmi(clusterApiUrl(SOLANA_NETWORK));
   umi.use(mplCore());
   return umi;
 };
-
-// Hardcoded for Devnet (you would generate this once and save it)
-// We will generate a real one in the next step and paste it here
-export const CC_TOKEN_MINT = 'HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa';
 
 // Official IPFS URIs for NFT metadata since we aren't uploading real files yet
 export const OFFICIAL_PROJECT_URIS = {

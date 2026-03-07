@@ -3,10 +3,8 @@ import { Platform, Alert } from 'react-native';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, clusterApiUrl } from '@solana/web3.js';
 import { WalletModal } from '../components/WalletModal';
 import { DisconnectModal } from '../components/DisconnectModal';
-import { useBlockchainStore } from '../store/blockchain-store';
-import { CC_TOKEN_MINT } from '../utils/solana';
-
-const TREASURY_ADDRESS = '4yEfgUdei5xQUrTwDA79vNTD9dPGS713qocD6XbkZcFB';
+import { useBlockchainStore, SignTransaction } from '../store/blockchain-store';
+import { TREASURY_ADDRESS, SOLANA_NETWORK, CC_TOKEN_MINT } from '../constants';
 
 // MWA imports — only used on native mobile
 let transactMWA: any = null;
@@ -36,8 +34,8 @@ interface WalletContextType {
     disconnect: () => void;
     getBalance: () => Promise<number>;
     refreshBalance: () => Promise<void>;
-    signTransaction: (tx: Transaction) => Promise<Transaction>;
-    sendSOL: (toAddress: string, amountSOL: number) => Promise<any>;
+    signTransaction: SignTransaction;
+    sendSOL: (toAddress: string, amountSOL: number) => Promise<string>;
     connection: Connection;
     protocolInfo: {
         treasury: string;
@@ -116,7 +114,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [connectModalVisible, setConnectModalVisible] = useState(false);
     const [disconnectModalVisible, setDisconnectModalVisible] = useState(false);
 
-    const connection = useMemo(() => new Connection(clusterApiUrl('devnet'), 'confirmed'), []);
+    const connection = useMemo(() => new Connection(clusterApiUrl(SOLANA_NETWORK), 'confirmed'), []);
 
     const handleSelectWallet = useCallback(async (walletId: string) => {
         setConnecting(true);
