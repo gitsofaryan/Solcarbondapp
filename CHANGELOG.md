@@ -1,115 +1,228 @@
-# Changelog
+# SolCarbon Mobile App — Changelog
 
-All notable changes to SolCarbon are documented here.  
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-
----
-
-## [Unreleased] – 2026-03-07
-
-### Bug Fixes & Logical Gap Patches
-
-A full audit of the application was conducted and the following logical gaps were identified and patched.
+> All notable changes to the **mobile** application are documented here.
+> Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Dates in IST (UTC+5:30).
 
 ---
 
-#### Fix 1 — `availableCC` now correctly decrements after purchase
-**Files:** `src/app/store/blockchain-store.ts`, `src/app/data/mock-projects.ts`
+## [0.4.0] — 2026-03-07
 
-**Problem:** The projects list was a static frozen import (`mockProjects`). Purchasing credits from a project never reduced its available supply — a user could buy 5,000 CC from a project with 5,000 available, then buy 5,000 again indefinitely.
+### 🆕 Added — Phase 1: Fractional CC + Retirement Flow
 
-**Fix:** Moved the projects array into Zustand state as a mutable copy (`projects: mockProjects.map(p => ({ ...p }))`). The `buyCredits` action now maps over projects and decrements `availableCC` for the purchased project before committing state.
+#### Credit Retirement (Portfolio Screen)
+- Added **🔥 Retire** button below every NFT certificate card in the Portfolio tab
+- New retirement bottom-sheet modal with:
+  - Purpose selection (ESG / BRSR Compliance, Personal Carbon Neutral, Supply Chain Offset, Climate Gift)
+  - ⚠️ Irreversibility warning banner
+  - Animated loading state during on-chain burn
+- **Retired Credits** counter added to the Portfolio summary bar (replaces unused SOL display)
+- On retirement success: shows tx signature and removes certificate from the grid
 
-Additionally added a `project.availableCC < amount` guard in `buyCredits` so purchases that exceed available supply are rejected with a clear error message.
+#### Fractional Offset Calculator (Tools Tab)
+- 6 pre-built offset presets:
+  - ✈️ Delhi → Mumbai (domestic flight, 0.15 CC)
+  - ✈️ Delhi → London (international, 0.82 CC)
+  - 🚗 Monthly Commute (petrol 15km/day, 0.31 CC)
+  - 💡 Monthly Electricity (500 kWh, 0.41 CC)
+  - 🏭 Small Office per year (10 employees, 25 CC)
+  - 🌱 Go Carbon Neutral (Indian annual average, 1.9 CC)
+- Custom decimal input supporting fractional CC (min 0.1 CC)
+- Live cost display in **₹ and USD** (`₹1,050/CC` baseline)
+- One-tap buy flow with demo confirmation alert
 
----
+### 🆕 Added — Phase 2: MSME Wizard & BRSR Generator (Tools Tab)
 
-#### Fix 2 — `autoFillDeficit` now self-sufficient and pre-validates USDC
-**Files:** `src/app/store/blockchain-store.ts`, `src/app/components/MobileDashboard.tsx`
+#### MSME Carbon Wizard
+- 5-step guided audit wizard:
+  1. **Industry type** selection (Manufacturing, IT, Retail, Food, Healthcare, Logistics)
+  2. **Energy inputs** — electricity kWh, diesel litres, petrol litres per month
+  3. **Employees** count for Scope 3 estimation
+  4. **Export markets** — flags EU CBAM compliance where applicable
+  5. **Review & Calculate** summary before computation
+- Results screen:
+  - Scope 1 (fuel) / Scope 2 (grid) / Scope 3 (value chain) breakdown with visual progress bars
+  - 3 offset packages: 🥉 Bronze (33%), 🥈 Silver (50%), 🥇 Gold (100% neutral)
+  - EU CBAM amber alert when exporting to Europe
+  - Prices shown in ₹ and USD
 
-**Problem:** `autoFillDeficit` accepted a `projects` array as an argument from the caller (the Dashboard passed in the static `mockProjects`). This meant it was blind to live supply changes. It also had no USDC pre-validation — an error would only surface deep inside `buyCredits` after an unnecessary blockchain delay.
+#### BRSR Report Generator
+- Input form for electricity, diesel, petrol, employees
+- Generates **SEBI BRSR Section C — Principle 6** formatted tables:
+  - GHG emissions table (Scope 1 / 2 / 3 / Total in tCO₂e)
+  - Energy parameters table (kWh consumed, renewable %, intensity per employee)
+  - Methodology notes citing **CEA 2023-24** and **BEE** emission factors
+- "Export BRSR PDF" demo button (production flow: Phase 3)
 
-**Fix:** Signature changed to `autoFillDeficit(): Promise<string>` (no arguments). It now reads `state.projects` directly from the store and checks both `availableCC >= deficit` **and** `usdcBalance >= totalCost` before selecting a project. It also returns two distinct error messages depending on which constraint fails.
+#### New Tools Tab
+- Added **5th tab** to the bottom navigator: 🔧 **Tools** (`construct` icon)
+- Tools home screen shows Phase 1 and Phase 2 cards with gradient visuals
 
----
+### 🐛 Fixed — Devnet Smart Contract Trade Execution
 
-#### Fix 3 — Marketplace uses live projects; quick-select clamped; amount resets on project switch
-**Files:** `src/app/components/MobileMarketplace.tsx`
+All five root causes of failed on-chain trades were identified and fixed in `src/store/blockchain-store.ts`:
 
-**Problem (a):** Marketplace rendered the static `mockProjects` array, so sold-out projects still appeared available after purchases.
+| # | Bug | Fix Applied |
+|---|---|---|
+| 1 | `delay()` ran before wallet-check, causing blockhash to expire | Moved delay to simulation-only path |
+| 2 | `new Web3Tx({ blockhash })` constructor arg doesn't exist in `@solana/web3.js` v1 | Use `tx.recentBlockhash = …` via new `stampBlockhash()` helper |
+| 3 | SPL mint tx used `partialSign(treasury)` leaving it unsigned on some paths | Switch to `tx.sign(treasury)` — treasury is sole signer for mint |
+| 4 | Sell tried CC transfer + SOL payout in a single tx needing two interactive signers | Split into two separate confirmed transactions |
+| 5 | No retry on transient devnet RPC errors (`blockhash not found`, rate limits) | Added `sendWithRetry()` helper with 3-attempt exponential backoff |
+| 6 | Metaplex NFT mint failure crashed entire purchase | NFT mint is now non-fatal; SPL purchase succeeds regardless |
 
-**Problem (b):** Quick-select buttons (`10 / 25 / 50 / 100`) would set `purchaseAmount` to values exceeding a project's `availableCC` with no clamping or feedback.
+### 🆕 Added — Devnet Scripts
 
-**Problem (c):** `purchaseAmount` state persisted when switching from one project to another — opening Project B after setting 100 CC on Project A would carry the stale amount across.
-
-**Fix:**  
-- Marketplace now reads `projects` from the Zustand store (live supply).  
-- Projects with `availableCC === 0` show a **"Sold Out"** overlay and have their "Buy Now" button disabled/greyed.  
-- Quick-select buttons are disabled when `amount > project.availableCC` and clamp via `Math.min(amount, project.availableCC)`.  
-- An `openProject(id)` helper resets `purchaseAmount` to `0` whenever a different project is selected.  
-- A `closeSheet()` helper resets both `selectedProject` and `purchaseAmount` on sheet dismiss.
-
----
-
-#### Fix 4 — Global `isLoading` race condition resolved
-**Files:** `src/app/store/blockchain-store.ts`, `src/app/components/MobileDashboard.tsx`, `src/app/components/MobileMarketplace.tsx`, `src/app/components/FloatingSellButton.tsx`
-
-**Problem:** A single shared `isLoading: boolean` flag was used for all async actions (`buyCredits`, `sellCredits`, `autoFillDeficit`). Concurrent actions could overwrite each other's loading state — e.g., a sell completing and setting `isLoading: false` while a buy was still in-flight, leaving UI buttons incorrectly re-enabled.
-
-**Fix:** Split into two independent flags:
-- `isBuying: boolean` — set by `buyCredits` and `autoFillDeficit`
-- `isSelling: boolean` — set by `sellCredits`
-
-All UI components updated to destructure and react to the appropriate flag.
-
-Also fixed sell transaction IDs to use the same unique `uid` pattern (`Date.now()-randomStr`) to avoid `Date.now()` collision risk on rapid actions.
-
----
-
-#### Fix 5 — Progress bar color now actually renders
-**Files:** `src/app/components/ui/progress.tsx`, `src/app/components/MobileDashboard.tsx`
-
-**Problem:** The compliance gauge used a `// @ts-ignore` hack to set `--progress-background` as a CSS custom property on the Radix `Progress` root, but Radix's `Indicator` child uses `bg-primary` internally — the custom variable was never consumed and the bar always rendered in the default theme color regardless of compliance state.
-
-**Fix:** Extended the `Progress` component with an `indicatorColor?: string` prop that is applied directly to `ProgressPrimitive.Indicator` via `style={{ backgroundColor: indicatorColor }}`. Also added a smooth `500ms ease-out` CSS transition for a polished animated fill.
-
-Dashboard now passes `indicatorColor={percentage >= 100 ? '#10b981' : '#f59e0b'}` (emerald when compliant, amber when in deficit). Progress value is also clamped to `Math.min(percentage, 100)` to prevent overflow beyond 100%.
-
----
-
-#### Fix 6 — Dead "View on Explorer" buttons now functional
-**Files:** `src/app/components/Portfolio.tsx`, `src/app/components/MobileHistory.tsx`
-
-**Problem:** Both the portfolio NFT cards and the transaction history rows had `ExternalLink` icon buttons with no `href`, `onClick`, or any navigation handler — they were purely decorative and did nothing when clicked.
-
-**Fix:**  
-- **Portfolio card** (row icon): `onClick` opens `https://explorer.solana.com/address/{nft.tokenId}?cluster=devnet` in a new tab.  
-- **Portfolio detail sheet** ("View on Solana Explorer" button): Converted from `<button>` to `<a>` with the same URL pattern.  
-- **Transaction history row**: Converted `<button>` to `<a>` linking to `https://explorer.solana.com/tx/{tx.signature}?cluster=devnet`.  
-All external links use `target="_blank" rel="noopener noreferrer"` for security.
+| Script | Purpose |
+|---|---|
+| `scripts/diagnose.mjs` | Checks treasury balance, mint existence, RPC reachability, auto-airdrops if low |
+| `scripts/test-trades.mjs` | Full integration test: BUY → SELL → RETIRE against live devnet |
 
 ---
 
-### Market Insights — Now Dynamic
-**File:** `src/app/components/MobileDashboard.tsx`
+## [0.3.0] — Earlier session
 
-**Problem:** "Avg. Market Price" was hardcoded as `$15.20 / CC` — stale and incorrect (actual average of the 8 projects is ~$15.76). "Projects Available" and "Total Supply" also read from the static import.
-
-**Fix:** All three Market Insights values are now computed live from `state.projects`:
-- **Avg. Market Price:** `(sum of pricePerCC) / projects.length`
-- **Projects Available:** `projects.filter(p => p.availableCC > 0).length`
-- **Total Supply:** `projects.reduce((sum, p) => sum + p.availableCC, 0)`
-
----
-
-### Security Notes
-This remains a **prototype/MVP** with simulated blockchain interactions. Real production use requires:
-- Phantom / wallet adapter integration with actual transaction signing
-- Solana web3.js for on-chain submissions
-- Metaplex for real NFT minting
-- Server-side rate limiting and input validation
-- Proper error boundaries and retry logic
+### Added
+- Full blockchain store with Zustand + AsyncStorage persistence
+- `buyCredits`, `sellCredits`, `retireCredits` actions
+- NFT certificate minting via Metaplex Core UMI
+- `WalletProvider` with Phantom/Solflare/Backpack web3 injection + MWA for native
+- `PortfolioScreen` — NFT grid, summary cards
+- `DashboardScreen` — portfolio overview, quick actions, trending projects
+- `TabNavigator` — 4 tabs (Dashboard, Market, Portfolio, History) with `ScreenWithHeader`
+- `ProjectDetailScreen` — price chart, trade panel (Buy/Sell), stats grid
+- Dark theme color palette (`src/theme/colors.ts`)
 
 ---
 
-*Audited and patched by 0ptimusPrime — 2026-03-07*
+## How to Run
+
+```bash
+# Install dependencies
+cd mobile && npm install
+
+# Web (browser preview)
+npm run web          # → http://localhost:8081
+
+# Native (requires Expo Go app on your phone)
+npm start            # Scan QR with Expo Go
+```
+
+---
+
+## How to Test the Trade Flow (Devnet)
+
+### Prerequisites
+- Node.js 18+
+- Treasury wallet already funded (run `diagnose.mjs` to verify)
+
+### Step 1 — Run the diagnostics script
+```bash
+node scripts/diagnose.mjs
+```
+Expected output:
+```
+✅ Treasury funded   (~5 SOL)
+✅ CC Mint exists    (decimals: 2, authority matches treasury)
+✅ RPC Reachable
+```
+
+### Step 2 — Run the full integration test
+```bash
+node scripts/test-trades.mjs
+```
+This script:
+1. Creates a fresh keypair as the "test user"
+2. Funds it with 0.5 SOL from the treasury
+3. Executes a real **BUY** (SOL payment + SPL CC token mint)
+4. Verifies the CC balance on-chain
+5. Executes a real **SELL** (CC transfer + SOL payout)
+6. Executes a real **RETIRE** (CC token burn)
+7. Prints final balances and pass/fail for each step
+
+Expected output:
+```
+✅ User funded: 0.5 SOL
+✅ SOL payment sent
+✅ CC tokens minted
+✅ User CC balance: 5 CC
+✅ CC transfer (sell)
+✅ SOL payout (sell)
+✅ CC tokens burned (retire)
+✅ All devnet trade tests PASSED!
+```
+
+### Step 3 — Test in the App UI
+
+1. Open `http://localhost:8081` in Chrome with Phantom extension installed
+2. Click **Connect Wallet** → select Phantom → approve on devnet
+3. Go to **Market** tab → tap any project → tap **Buy 10 CC**
+   - Phantom popup appears → approve → wait ~5-10s for 2 confirmations
+   - Success screen shows tx signature + NFT asset ID
+4. Go to **Portfolio** tab → see your new NFT certificate appear
+   - Tap **🔥 Retire** → select purpose → **Confirm Retirement**
+   - CC balance changes, certificate removed from grid
+5. Go to **History** tab → see all 3 transaction types (buy / sell / retire)
+6. Go to **Tools** tab → try MSME Wizard or Fractional Offset Calculator
+
+### Key Addresses (Devnet)
+```
+Treasury : 4yEfgUdei5xQUrTwDA79vNTD9dPGS713qocD6XbkZcFB
+CC Mint  : HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa
+Cluster  : devnet (https://api.devnet.solana.com)
+```
+
+Verify any transaction on: https://explorer.solana.com/?cluster=devnet
+
+---
+
+## Emission Factors Used (India, 2024)
+
+| Source | Factor |
+|---|---|
+| Grid electricity | 0.82 kg CO₂/kWh (CEA 2023-24) |
+| Diesel | 2.68 kg CO₂/L |
+| Petrol | 2.31 kg CO₂/L |
+| LPG | 2.98 kg CO₂/kg |
+| CNG | 2.21 kg CO₂/kg |
+| Domestic flight | 0.255 kg CO₂/km per passenger |
+| International flight | 0.195 kg CO₂/km per passenger |
+| Scope 3 (employee services) | 2.5 tCO₂/employee/year |
+
+Source: Bureau of Energy Efficiency (BEE), Central Electricity Authority (CEA), GHG Protocol 2024
+
+---
+
+## Architecture Notes
+
+```
+mobile/
+├── src/
+│   ├── store/
+│   │   └── blockchain-store.ts   # Zustand store — all on-chain logic
+│   ├── providers/
+│   │   └── WalletProvider.tsx    # Wallet state, signTransaction, MWA
+│   ├── screens/
+│   │   ├── DashboardScreen.tsx
+│   │   ├── MarketplaceScreen.tsx
+│   │   ├── PortfolioScreen.tsx   # + Retire flow
+│   │   ├── ProjectDetailScreen.tsx
+│   │   ├── HistoryScreen.tsx
+│   │   └── ToolsScreen.tsx       # NEW: Offset calc + MSME wizard + BRSR
+│   ├── navigation/
+│   │   └── TabNavigator.tsx      # 5-tab bottom nav
+│   ├── theme/
+│   │   └── colors.ts
+│   └── utils/
+│       ├── ecosystem.ts          # Treasury keypair + CC Mint address
+│       └── solana.ts             # UMI instance, mock NFT URIs
+├── scripts/
+│   ├── diagnose.mjs              # Devnet health check
+│   ├── test-trades.mjs           # Full trade integration test ← START HERE
+│   ├── init-ecosystem.mjs        # First-time treasury + mint setup
+│   ├── check-balance.mjs
+│   ├── init-metadata.mjs
+│   ├── update-metadata.mjs
+│   └── deploy-metadata-irys.mjs
+└── contract/
+    └── Anchor.toml               # Program ID placeholder (Carbon1111…)
+```

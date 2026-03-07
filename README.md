@@ -1,49 +1,59 @@
-# SolCarbon Mobile dApp 🌿◎
+# SolCarbon - Solana Carbon Credit Exchange 🌿◎
 
-SolCarbon is a decentralized application (dApp) built on the Solana blockchain, designed to facilitate the tokenization, exchange, and retirement of Carbon Credits.
+SolCarbon is a premium, mobile-first decentralized application (dApp) built on the Solana blockchain, designed to facilitate the tokenization, exchange, and retirement of Carbon Credits.
 
 This repository contains the mobile client built with React Native and Expo, deeply integrated with the Solana ecosystem using the Mobile Wallet Adapter (MWA) and Metaplex standards.
+
+---
 
 ## 🏗️ Technical Architecture
 
 ### 1. Core Frameworks
 *   **React Native & Expo**: Cross-platform mobile framework leveraging Expo SDK 55 for rapid iteration and native module access.
-*   **Solana Web3.js**: The official Solana JavaScript API for interacting with the RPC network (Devnet).
-*   **Zustand**: A small, fast, and scalable state management solution used to handle complex asynchronous blockchain states (wallet connections, token balances, transaction history).
+*   **Solana Web3.js**: Official Solana JavaScript API for interacting with the RPC network (Devnet).
+*   **Zustand**: Scalable state management used to handle complex asynchronous blockchain states (wallet connections, token balances, transaction history).
 
 ### 2. Blockchain Integrations
 
 #### Wallet Connectivity
-*   **Mobile Wallet Adapter (MWA)**: Integrates `@solana-mobile/mobile-wallet-adapter-protocol` to provide native, secure Android/iOS wallet connections. Users can connect, switch networks, and sign transactions using Backpack, Phantom, or Solflare seamlessly.
+*   **Mobile Wallet Adapter (MWA)**: Integrates `@solana-mobile/mobile-wallet-adapter-protocol` for native, secure Android/iOS wallet connections (Backpack, Phantom, Solflare).
 
 #### SPL Token Standardization (SOLCC)
-*   The protocol revolves around a custom SPL Token representing 1 Ton of verified Carbon Credits.
-*   **On-Chain Metadata**: Leveraging `@metaplex-foundation/mpl-token-metadata`, the SPL Token is fully branded ("SolCarbon Credit" / "SOLCC").
-*   **Decentralized Storage**: Token imagery and JSON metadata are permanently pinned to the **Arweave** blockchain using the **Irys SDK** (`@metaplex-foundation/umi-uploader-irys`), guaranteeing immutability and preventing "spoofing" warnings on Solana Explorers.
+*   **On-Chain Metadata**: Leveraging Metaplex Token Metadata, the SPL Token represents 1 Ton of verified Carbon Credits ("SOLCC").
+*   **Decentralized Storage**: Assets are pinned to **Arweave** via the **Irys SDK**, guaranteeing immutability.
 
 #### Dynamic NFT Certificates
-*   **Metaplex Core**: Upon purchasing/retiring Carbon Credits, the dApp dynamically mints a Metaplex Core NFT to the user's wallet.
-*   **On-the-Fly Asset Generation**: Uses programmatic UI overlays to stamp real-time transaction data (Amount, Date, Tx Signature, Asset ID) onto a high-end "ATM Card" style graphical asset.
-*   These non-fungible certificates act as immutable, cryptographically verifiable proof of corporate or individual carbon offsets.
+*   **Metaplex Core**: Upon purchase/retirement, the dApp dynamically mints a Metaplex Core NFT as immutable proof of offset.
+*   **Programmatic Assets**: Real-time transaction data is stamped onto high-end graphical assets during the minting process.
 
-### 3. Application Structure
+---
 
-*   **/src/store/blockchain-store.ts**: The central nervous system of the dApp. Handles all async RPC calls, SPL token transfers, ATA (Associated Token Account) creation, and NFT minting instructions.
-*   **/src/providers/WalletProvider.tsx**: Wraps the application in the Solana MWA context, providing global access to the active authorization token and signing capabilities.
-*   **/scripts/**: Contains critical Node.js utilities for backend operations, including:
-    *   `deploy-metadata-irys.mjs`: Automates the upload of assets to Arweave and updates on-chain Master Mint metadata.
-*   **/contract/**: Contains scaffolding for an **Anchor**-based Rust smart contract program, designed for future migration of business logic entirely on-chain.
+## 🌟 Key Features
 
-## 🚀 Getting Started (Devnet)
+### 1. **Compliance Dashboard**
+- **Real-time Carbon Gauge**: Progress tracking against compliance targets.
+- **Deficit/Surplus Alerts**: Dynamic highlights for credit shortfalls or surpluses.
+- **Quick Fill Action**: One-tap auto-purchase to meet compliance.
+
+### 2. **Carbon Marketplace**
+- **Verified Projects**: Detailed listings for Indian carbon projects (Solar, Wind, Reforestation, etc.).
+- **Interactive Purchase Flow**: Bottom sheets with real-time cost calculation and quantity selection.
+
+### 3. **Portfolio & History**
+- **NFT Certificate Grid**: View and manage your unique carbon credit certificates.
+- **Complete Audit Trail**: Filterable transaction history with direct links to Solana Explorer.
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 *   Node.js v18+
 *   Expo CLI (`npm install -g expo-cli`)
-*   A Solana Wallet App installed on your Android emulator or physical device (e.g., Backpack, Phantom).
+*   Solana Wallet App (Phantom/Backpack) on your device.
 
 ### Installation
 ```bash
-cd mobile
 npm install
 ```
 
@@ -53,11 +63,22 @@ Start the Expo Metro bundler:
 npm start
 ```
 
-Press `a` to open the Android emulator or scan the QR code using the Expo Go app on your physical device.
+Press `a` to open the Android emulator or scan the QR code using the Expo Go app.
+
+---
+
+## 🔧 Application Structure
+*   **/src/store/blockchain-store.ts**: Central state and RPC interaction logic.
+*   **/src/screens/**: Main application views (Dashboard, Marketplace, Portfolio, etc.).
+*   **/src/providers/WalletProvider.tsx**: Solana MWA context provider.
+*   **/scripts/**: Utilities for metadata deployment and treasury initialization.
+*   **/contract/**: Anchor-based Rust smart contract program.
+
+---
 
 ## 🔒 Security Notes
-*   **Treasury Keypair**: The current test environment utilizes a hardcoded Treasury Native Array for demonstration of mint authority. In a production Mainnet environment, this logic MUST be migrated behind a secure backend API or fully integrated into the provided Anchor Smart Contract to secure the Mint Authority.
-*   **Network Constraint**: The Application is strictly bound to the **Solana Devnet** cluster via `https://api.devnet.solana.com`.
+*   **Prototype Environment**: This version utilizes simulated blockchain interactions and a test treasury keypair. In production, logic must be migrated behind secure APIs or fully on-chain programs.
+*   **Network**: strictly bound to **Solana Devnet**.
 
 ---
 *Built for the Future of ReFi (Regenerative Finance) on Solana.*
