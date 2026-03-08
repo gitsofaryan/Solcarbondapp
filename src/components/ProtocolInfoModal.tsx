@@ -54,7 +54,7 @@ export const ProtocolInfoModal: React.FC<ProtocolInfoModalProps> = ({
                         <View style={styles.infoBox}>
                             <View style={styles.infoLabelRow}>
                                 <MaterialCommunityIcons name="bank" size={16} color={colors.amber} />
-                                <Text style={styles.infoLabel}>Treasury (Mint Authority)</Text>
+                                <Text style={styles.infoLabel}>Treasury PDA (Mint Authority)</Text>
                             </View>
                             <Text style={styles.addressText}>{treasuryAddress}</Text>
                             <TouchableOpacity

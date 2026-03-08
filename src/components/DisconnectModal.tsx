@@ -6,6 +6,8 @@ import {
     Modal,
     TouchableOpacity,
     Alert,
+    Platform,
+    Linking,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -15,6 +17,7 @@ interface DisconnectModalProps {
     onClose: () => void;
     walletAddress: string;
     solBalance: number | null;
+    skrBalance?: number | null;
     onDisconnect: () => void;
 }
 
@@ -23,6 +26,7 @@ export const DisconnectModal: React.FC<DisconnectModalProps> = ({
     onClose,
     walletAddress,
     solBalance,
+    skrBalance,
     onDisconnect,
 }) => {
     const handleDisconnect = () => {
@@ -59,6 +63,14 @@ export const DisconnectModal: React.FC<DisconnectModalProps> = ({
                         </View>
                     )}
 
+                    {/* SKR Balance */}
+                    {skrBalance !== null && skrBalance !== undefined && skrBalance > 0 && (
+                        <View style={[styles.balanceBox, { backgroundColor: 'rgba(20, 241, 149, 0.08)', borderColor: 'rgba(20, 241, 149, 0.15)' }]}>
+                            <Text style={styles.balanceLabel}>SKR (Solana Mobile)</Text>
+                            <Text style={[styles.balanceValue, { color: '#14F195' }]}>📱 {skrBalance.toLocaleString()} SKR</Text>
+                        </View>
+                    )}
+
                     {/* Info Rows */}
                     <View style={styles.infoRow}>
                         <Text style={styles.infoLabel}>Network</Text>
@@ -80,7 +92,12 @@ export const DisconnectModal: React.FC<DisconnectModalProps> = ({
                     <View style={styles.actions}>
                         <TouchableOpacity
                             style={styles.copyBtn}
-                            onPress={() => {
+                            onPress={async () => {
+                                try {
+                                    if (Platform.OS === 'web' && navigator?.clipboard) {
+                                        await navigator.clipboard.writeText(walletAddress);
+                                    }
+                                } catch (_) { /* best-effort */ }
                                 Alert.alert('Copied!', 'Wallet address copied to clipboard.');
                             }}
                             activeOpacity={0.8}
@@ -91,7 +108,14 @@ export const DisconnectModal: React.FC<DisconnectModalProps> = ({
 
                         <TouchableOpacity
                             style={styles.explorerBtn}
-                            onPress={() => { }}
+                            onPress={() => {
+                                const url = `https://explorer.solana.com/address/${walletAddress}?cluster=devnet`;
+                                if (Platform.OS === 'web') {
+                                    (window as any).open(url, '_blank');
+                                } else {
+                                    Linking.openURL(url);
+                                }
+                            }}
                             activeOpacity={0.8}
                         >
                             <Ionicons name="open-outline" size={16} color={colors.textSecondary} />

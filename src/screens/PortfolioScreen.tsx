@@ -46,6 +46,10 @@ export const PortfolioScreen: React.FC = () => {
 
     // ── Derive CC balance from owned certificates ──
     const totalCC = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
+    const portfolioValueSOL = myCertificates.reduce((sum, cert) => {
+        const proj = verifiedProjects.find(p => p.id === cert.projectId);
+        return sum + (cert.amount * (proj?.pricePerCC || 0));
+    }, 0);
     const retiredCount = myTransactions.filter(t => t.type === 'retire').length;
 
     const handleRetire = async () => {
@@ -102,7 +106,7 @@ export const PortfolioScreen: React.FC = () => {
                     <View style={styles.summaryCardDark}>
                         <Ionicons name="trending-up" size={20} color={colors.amber} />
                         <Text style={[styles.summaryValue, { color: colors.amber }]}>
-                            ◎ {(totalCC * 0.1).toFixed(2)}
+                            ◎ {portfolioValueSOL.toFixed(2)}
                         </Text>
                         <Text style={styles.summaryLabelDark}>Value</Text>
                     </View>

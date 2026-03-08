@@ -15,12 +15,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/colors';
 import { useBlockchainStore } from '../store/blockchain-store';
 import { solToUsd } from '../utils/price';
+import { useWalletContext } from '../providers/WalletProvider';
 
 export const ListProjectScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     // We'll reuse sellCredits for listing for now, but really this would be a new function
     // in the actual contract (e.g. createProject)
-    const { sellCredits, carbonCredits, isLoading } = useBlockchainStore();
+    const { sellCredits, nftCertificates, isLoading } = useBlockchainStore();
+    const wallet = useWalletContext();
+
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress && c.amount > 0);
+    const myCarbonCredits = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
 
     const [projectName, setProjectName] = useState('');
     const [projectType, setProjectType] = useState('');
@@ -41,14 +46,18 @@ export const ListProjectScreen: React.FC = () => {
             Alert.alert('Invalid Input', 'Please enter a valid amount and price.');
             return;
         }
-        if (numAmount > carbonCredits) {
-            Alert.alert('Insufficient Credits', `You only have ${carbonCredits} CC available to list.`);
+        if (!wallet.connected) {
+            wallet.openConnectModal();
+            return;
+        }
+        if (numAmount > myCarbonCredits) {
+            Alert.alert('Insufficient Credits', `You only have ${myCarbonCredits} CC available to list.`);
             return;
         }
 
         try {
             // In a real app this would call a createProject/listCredits function
-            const sig = await sellCredits(numAmount, numPrice);
+            const sig = await sellCredits(numAmount, numPrice, wallet.walletAddress ?? undefined, wallet.signTransaction);
             Alert.alert(
                 '✅ Project Listed!',
                 `Listed ${numAmount} CC for "${projectName}" at ◎ ${numPrice}/CC\n\nSignature: ${sig.substring(0, 20)}...`,
@@ -111,7 +120,7 @@ export const ListProjectScreen: React.FC = () => {
 
                     <View style={styles.surplusInfo}>
                         <Ionicons name="leaf" size={16} color={colors.green} />
-                        <Text style={styles.surplusText}>Available in Wallet: {carbonCredits} CC</Text>
+                        <Text style={styles.surplusText}>Available in Wallet: {myCarbonCredits} CC</Text>
                     </View>
 
                     <View style={styles.inputGroup}>
@@ -121,7 +130,7 @@ export const ListProjectScreen: React.FC = () => {
                             value={amount}
                             onChangeText={setAmount}
                             keyboardType="numeric"
-                            placeholder={`Max ${carbonCredits}`}
+                            placeholder={`Max ${myCarbonCredits}`}
                             placeholderTextColor={colors.textMuted}
                         />
                     </View>

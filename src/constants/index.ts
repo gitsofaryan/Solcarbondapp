@@ -17,10 +17,16 @@ export const SOLANA_NETWORK = 'devnet' as const;
 export const CC_TOKEN_MINT = 'HVvtKeii8fyygZE1iFygm9HpcdTVDe6ig1uUFe8aZpAa';
 
 /**
- * Public address of the treasury wallet.
+ * SKR — Solana Mobile ecosystem token (mainnet).
+ * Official CA from https://www.solanamobile.com/skr
+ */
+export const SKR_TOKEN_MINT = 'SKRtRYQEhfQ47gCA6hcyqXjBRJJpZgKGnoiSmJPXB3s';
+
+/**
+ * Public address of the treasury PDA wallet.
  * This account holds SOL reserves and acts as the SPL mint authority.
  */
-export const TREASURY_ADDRESS = '4yEfgUdei5xQUrTwDA79vNTD9dPGS713qocD6XbkZcFB';
+export const TREASURY_ADDRESS = 'EM1yn6t5cbyQWSeNmQziqRVhgnjPASZEF92MM8sgMaK4';
 
 // ── Price feed ────────────────────────────────────────────────────────────────
 

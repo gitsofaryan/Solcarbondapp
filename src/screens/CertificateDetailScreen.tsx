@@ -144,9 +144,8 @@ export const CertificateDetailScreen: React.FC = () => {
                     <DynamicCertificate
                         projectName={cert.projectName}
                         amount={cert.amount}
-                        date={new Date(cert.mintDate).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' })}
-                        assetId={cert.tokenId}
-                        holderAddress={wallet.walletAddress || ''}
+                        mintDate={new Date(cert.mintDate).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' })}
+                        tokenId={cert.tokenId}
                         purchasingFirm={cert.purchasingFirm}
                     />
                 </View>

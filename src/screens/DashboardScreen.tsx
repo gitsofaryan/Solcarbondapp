@@ -9,6 +9,7 @@ import {
     Alert,
     Image,
     Dimensions,
+    Animated,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,13 +29,38 @@ export const DashboardScreen: React.FC = () => {
     const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress && c.amount > 0);
     const myCCBalance = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
 
+    // FIX: Calculate portfolio value based on specific project prices for held credits
+    const portfolioValueSOL = myCertificates.reduce((sum, cert) => {
+        const project = verifiedProjects.find(p => p.id === cert.projectId);
+        return sum + (cert.amount * (project?.pricePerCC || 0));
+    }, 0);
+
     const avgPrice = verifiedProjects.reduce((s, p) => s + p.pricePerCC, 0) / verifiedProjects.length;
-    const portfolioValueSOL = myCCBalance * avgPrice;
     const totalSupply = verifiedProjects.reduce((s, p) => s + p.availableCC, 0);
 
     const sorted = [...verifiedProjects].sort((a, b) => b.change24h - a.change24h);
     const topGainers = sorted.slice(0, 3);
     const recentTxs = transactions.slice(0, 3);
+
+    // Animation for balance
+    const [displayValue] = useState(new Animated.Value(portfolioValueSOL));
+
+    React.useEffect(() => {
+        Animated.timing(displayValue, {
+            toValue: portfolioValueSOL,
+            duration: 800,
+            useNativeDriver: false,
+        }).start();
+    }, [portfolioValueSOL]);
+
+    const [val, setVal] = useState(portfolioValueSOL);
+
+    React.useEffect(() => {
+        const id = displayValue.addListener(({ value }) => {
+            setVal(value);
+        });
+        return () => displayValue.removeListener(id);
+    }, []);
 
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -47,9 +73,9 @@ export const DashboardScreen: React.FC = () => {
             >
                 <Text style={styles.portfolioLabel}>Portfolio Value</Text>
                 <Text style={styles.portfolioValue}>
-                    ◎ {portfolioValueSOL.toFixed(4)} SOL
+                    ◎ {val.toFixed(4)} SOL
                 </Text>
-                <Text style={styles.portfolioUsd}>≈ ${solToUsd(portfolioValueSOL).toFixed(2)} USD</Text>
+                <Text style={styles.portfolioUsd}>≈ ${solToUsd(val).toFixed(2)} USD</Text>
                 <View style={styles.statsRow}>
                     <View style={styles.statPill}>
                         <Ionicons name="leaf" size={12} color={colors.green} />

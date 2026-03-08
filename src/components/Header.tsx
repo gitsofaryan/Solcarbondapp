@@ -65,10 +65,18 @@ export const Header: React.FC = () => {
                         </Text>
                     </View>
                 )}
-                <View style={[styles.pill, styles.ccPill]}>
-                    <Ionicons name="leaf" size={11} color={colors.green} />
-                    <Text style={styles.pillValue}>{myCCBalance} CC</Text>
-                </View>
+                {wallet.connected && (
+                    <View style={[styles.pill, styles.ccPill]}>
+                        <Ionicons name="leaf" size={11} color={colors.green} />
+                        <Text style={styles.pillValue}>{myCCBalance} CC</Text>
+                    </View>
+                )}
+                {wallet.connected && wallet.skrBalance !== null && wallet.skrBalance > 0 && (
+                    <View style={[styles.pill, styles.skrPill]}>
+                        <Text style={[styles.pillLabel, { color: '#14F195' }]}>📱</Text>
+                        <Text style={styles.pillValue}>{wallet.skrBalance.toLocaleString()} SKR</Text>
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -167,6 +175,7 @@ const styles = StyleSheet.create({
     },
     solPill: {},
     ccPill: {},
+    skrPill: {},
     pillLabel: {
         fontSize: 12,
         fontWeight: '800',

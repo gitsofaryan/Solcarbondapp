@@ -15,10 +15,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/colors';
 import { useBlockchainStore } from '../store/blockchain-store';
 import { solToUsd } from '../utils/price';
+import { useWalletContext } from '../providers/WalletProvider';
 
 export const SellProjectScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const { carbonCredits, nftCertificates, sellCredits, isLoading } = useBlockchainStore();
+    const { nftCertificates, sellCredits, isLoading } = useBlockchainStore();
+    const wallet = useWalletContext();
+
+    const myCertificates = nftCertificates.filter(c => c.owner === wallet.walletAddress && c.amount > 0);
+    const myCarbonCredits = myCertificates.reduce((sum, cert) => sum + cert.amount, 0);
 
     const [amount, setAmount] = useState('');
     const [price, setPrice] = useState('0.10');
@@ -32,8 +37,12 @@ export const SellProjectScreen: React.FC = () => {
             Alert.alert('Invalid Amount', 'Please enter a valid amount of CCs to sell.');
             return;
         }
-        if (numAmount > carbonCredits) {
-            Alert.alert('Insufficient Credits', `You only have ${carbonCredits} CC available.`);
+        if (!wallet.connected) {
+            wallet.openConnectModal();
+            return;
+        }
+        if (numAmount > myCarbonCredits) {
+            Alert.alert('Insufficient Credits', `You only have ${myCarbonCredits} CC available.`);
             return;
         }
         if (numPrice <= 0) {
@@ -42,7 +51,8 @@ export const SellProjectScreen: React.FC = () => {
         }
 
         try {
-            const sig = await sellCredits(numAmount, numPrice);
+            const sig = await sellCredits(numAmount, numPrice, wallet.walletAddress ?? undefined, wallet.signTransaction);
+            wallet.refreshBalance();
             Alert.alert(
                 '✅ Credits Listed!',
                 `Your ${numAmount} CC have been listed on the market at ◎ ${numPrice}/CC\n\nSignature: ${sig.substring(0, 20)}...`,
@@ -73,10 +83,10 @@ export const SellProjectScreen: React.FC = () => {
                         <Text style={styles.walletTitle}>Your Available Credits</Text>
                     </View>
                     <View style={styles.balanceRow}>
-                        <Text style={styles.balanceValue}>{carbonCredits} CC</Text>
+                        <Text style={styles.balanceValue}>{myCarbonCredits} CC</Text>
                         <View style={styles.nftBadge}>
                             <MaterialCommunityIcons name="certificate" size={12} color={colors.blue} />
-                            <Text style={styles.nftText}>{nftCertificates.length} Certificates</Text>
+                            <Text style={styles.nftText}>{myCertificates.length} Certificates</Text>
                         </View>
                     </View>
                     <Text style={styles.walletSub}>These are credits you have purchased and hold in your connected Solana wallet.</Text>
@@ -94,12 +104,12 @@ export const SellProjectScreen: React.FC = () => {
                                 value={amount}
                                 onChangeText={setAmount}
                                 keyboardType="numeric"
-                                placeholder={`Max ${carbonCredits}`}
+                                placeholder={`Max ${myCarbonCredits}`}
                                 placeholderTextColor={colors.textMuted}
                             />
                             <TouchableOpacity
                                 style={styles.maxBtn}
-                                onPress={() => setAmount(carbonCredits.toString())}
+                                onPress={() => setAmount(myCarbonCredits.toString())}
                             >
                                 <Text style={styles.maxText}>MAX</Text>
                             </TouchableOpacity>
