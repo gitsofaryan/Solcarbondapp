@@ -1,0 +1,94 @@
+{
+  "cli": {
+    "version": ">= 16.3.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "devnet-internal": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "buildType": "simulator"
+      },
+      "env": {
+        "APP_VARIANT": "devnet"
+      }
+    },
+    "devnet-preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "ios": {
+        "buildType": "archive"
+      },
+      "node": "22.14.0",
+      "env": {
+        "APP_VARIANT": "devnet",
+        "EXPO_PUBLIC_ENVIRONMENT": "devnet"
+      }
+    },
+    "dappstore": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "node": "22.14.0",
+      "env": {
+        "APP_VARIANT": "dappstore",
+        "EXPO_PUBLIC_ENVIRONMENT": "staging"
+      }
+    },
+    "production-android": {
+      "android": {
+        "buildType": "aab",
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "ios": null,
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "production"
+      }
+    },
+    "production-ios": {
+      "android": null,
+      "ios": {
+        "buildType": "archive"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "production"
+      }
+    }
+  },
+  "submit": {
+    "devnet-production": {
+      "android": {
+        "serviceAccount": "@solcarbon-android-key.json",
+        "track": "internal"
+      }
+    },
+    "production-android": {
+      "android": {
+        "serviceAccount": "@solcarbon-android-key.json",
+        "track": "closed-testing"
+      }
+    },
+    "production-ios": {
+      "ios": {
+        "appleId": "@solcarbon-appleid"
+      }
+    }
+  }
+}
