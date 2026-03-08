@@ -15,7 +15,7 @@ import { useWalletContext } from '../providers/WalletProvider';
 import { CC_TOKEN_MINT } from '../utils/solana';
 
 
-type FilterType = 'all' | 'buy' | 'sell';
+type FilterType = 'all' | 'buy' | 'sell' | 'retire';
 
 export const HistoryScreen: React.FC = () => {
     const { transactions } = useBlockchainStore();
@@ -57,7 +57,7 @@ export const HistoryScreen: React.FC = () => {
 
                 {/* Filters */}
                 <View style={styles.filterRow}>
-                    {(['all', 'buy', 'sell'] as FilterType[]).map((f) => (
+                    {(['all', 'buy', 'sell', 'retire'] as FilterType[]).map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
@@ -69,7 +69,7 @@ export const HistoryScreen: React.FC = () => {
                                     filter === f && styles.filterBtnTextActive,
                                 ]}
                             >
-                                {f === 'all' ? 'All' : f === 'buy' ? 'Purchases' : 'Sales'}
+                                {f === 'all' ? 'All' : f === 'buy' ? 'Purchases' : f === 'sell' ? 'Sales' : 'Retired'}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -93,11 +93,11 @@ export const HistoryScreen: React.FC = () => {
                                 onPress={() => setSelectedTx(tx)}
                                 activeOpacity={0.7}
                             >
-                                <View style={[styles.tokenLogo, { backgroundColor: tx.type === 'buy' ? colors.greenBg : colors.amberBg }]}>
+                                <View style={[styles.tokenLogo, { backgroundColor: tx.type === 'buy' ? colors.greenBg : tx.type === 'retire' ? colors.redBg : colors.amberBg }]}>
                                     <Ionicons
-                                        name={tx.type === 'buy' ? 'arrow-down' : 'arrow-up'}
+                                        name={tx.type === 'buy' ? 'arrow-down' : tx.type === 'retire' ? 'flame' : 'arrow-up'}
                                         size={20}
-                                        color={tx.type === 'buy' ? colors.green : colors.amber}
+                                        color={tx.type === 'buy' ? colors.green : tx.type === 'retire' ? colors.red : colors.amber}
                                     />
                                 </View>
 
@@ -112,10 +112,10 @@ export const HistoryScreen: React.FC = () => {
                                     <Text
                                         style={[
                                             styles.tokenBalance,
-                                            { color: tx.type === 'buy' ? colors.green : colors.amber },
+                                            { color: tx.type === 'buy' ? colors.green : tx.type === 'retire' ? colors.red : colors.amber },
                                         ]}
                                     >
-                                        {tx.type === 'buy' ? '+' : '-'}{tx.amount} CC
+                                        {tx.type === 'buy' ? '+' : tx.type === 'retire' ? '🔥 ' : '-'}{tx.amount} CC
                                     </Text>
                                     <Text style={styles.tokenUsd}>
                                         ◎ {tx.totalSOL.toFixed(4)} SOL

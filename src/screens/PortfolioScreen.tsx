@@ -166,10 +166,12 @@ export const PortfolioScreen: React.FC = () => {
 
                                     <TouchableOpacity
                                         style={styles.inlineRetireBtn}
-                                        activeOpacity={0.8}
+                                        activeOpacity={0.7}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                         onPress={() => { setRetireTarget(nft); setSelectedPurpose(null); }}
                                     >
                                         <Ionicons name="flame" size={16} color={colors.red} />
+                                        <Text style={styles.retireBtnLabel}>Retire</Text>
                                     </TouchableOpacity>
                                 </View>
                             );
@@ -373,14 +375,23 @@ const styles = StyleSheet.create({
     tokenBalance: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
     tokenUsd: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
     inlineRetireBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        minWidth: 52,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 12,
         backgroundColor: colors.redBg,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: colors.red + '40',
+        zIndex: 10,
+        flexDirection: 'row',
+        gap: 4,
+    },
+    retireBtnLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.red,
     },
 
     // Modal

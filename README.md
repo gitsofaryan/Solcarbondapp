@@ -131,18 +131,6 @@ npm run web
 npm run android
 ```
 
-### Devnet Scripts
-```bash
-# Check treasury balance, mint existence, RPC reachability
-node scripts/diagnose.mjs
-
-# Full integration test: BUY → SELL → RETIRE
-node scripts/test-trades.mjs
-
-# Initialize treasury PDA and transfer mint authority
-node scripts/init-treasury-pda.mjs
-```
-
 ---
 
 ## On-Chain Addresses (Devnet)
@@ -170,27 +158,10 @@ node scripts/init-treasury-pda.mjs
 │   ├── store/                   # Zustand blockchain store
 │   ├── theme/                   # Colors, typography
 │   └── utils/                   # Solana helpers, price utils
-├── scripts/                     # Devnet utilities (diagnose, test, init)
 ├── assets/                      # Icons, logos, metadata
 ├── app.json                     # Expo config
-├── eas.json                     # EAS Build config (APK for dApp Store)
 └── package.json
 ```
-
----
-
-## Deploying to Solana dApp Store
-
-SolCarbon is configured for the Solana dApp Store (0% platform fees, 150K+ Seeker devices):
-
-```bash
-# Build signed APK (not AAB)
-eas build --profile dappstore --platform android
-
-# Then submit at https://publisher.solanamobile.com
-```
-
-See [CHANGELOG.md](CHANGELOG.md) for full version history.
 
 ---
 

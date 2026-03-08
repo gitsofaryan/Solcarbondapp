@@ -520,14 +520,15 @@ const styles = StyleSheet.create({
     },
     closeModalBtn: {
         position: 'absolute',
-        top: -60,
+        top: 8,
         right: 20,
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.15)',
         alignItems: 'center',
         justifyContent: 'center',
+        zIndex: 10,
     },
     popOutHint: {
         color: colors.textSecondary,

@@ -4,16 +4,18 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    Image,
     Dimensions,
     Alert,
     Platform,
+    Modal,
+    ActivityIndicator,
+    ScrollView,
+    Pressable,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
 import { captureRef } from 'react-native-view-shot';
 import { colors } from '../theme/colors';
 import { useBlockchainStore } from '../store/blockchain-store';
@@ -31,6 +33,8 @@ export const CertificateDetailScreen: React.FC = () => {
     const { nftCertificates, retireCredits } = useBlockchainStore();
     const wallet = useWalletContext();
     const [protocolVisible, setProtocolVisible] = useState(false);
+    const [retireModalVisible, setRetireModalVisible] = useState(false);
+    const [retiring, setRetiring] = useState(false);
     const cert = nftCertificates.find(c => c.id === id);
 
     const viewRef = useRef(null);
@@ -92,31 +96,25 @@ export const CertificateDetailScreen: React.FC = () => {
     };
 
     const handleRetire = () => {
-        Alert.alert(
-            'Retire Carbon Credits?',
-            `This will permanently burn ${cert.amount} CC. This proves you have consumed this carbon offset.\n\nThis action cannot be undone.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Burn & Retire',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const sig = await retireCredits(
-                                cert.id,
-                                wallet.publicKey?.toBase58(),
-                                wallet.signTransaction
-                            );
-                            Alert.alert('✅ Credits Retired', `You have officially offset ${cert.amount} tons of CO2.\n\nSig: ${sig.substring(0, 16)}...`, [
-                                { text: 'Done', onPress: () => navigation.goBack() }
-                            ]);
-                        } catch (error: any) {
-                            Alert.alert('Error', error.message || 'Failed to retire credits');
-                        }
-                    }
-                }
-            ]
-        );
+        setRetireModalVisible(true);
+    };
+
+    const confirmRetire = async () => {
+        setRetiring(true);
+        try {
+            const sig = await retireCredits(
+                cert.id,
+                wallet.publicKey?.toBase58(),
+                wallet.signTransaction
+            );
+            setRetireModalVisible(false);
+            setRetiring(false);
+            Alert.alert('✅ Credits Retired', `You have officially offset ${cert.amount} tons of CO2.\n\nSig: ${sig.substring(0, 16)}...`);
+            navigation.goBack();
+        } catch (error: any) {
+            setRetiring(false);
+            Alert.alert('Error', error.message || 'Failed to retire credits');
+        }
     };
 
     return (
@@ -137,14 +135,14 @@ export const CertificateDetailScreen: React.FC = () => {
                 </View>
             </View>
 
-            <View style={styles.content}>
+            <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
 
                 {/* The View to be captured as an image for sharing */}
                 <View style={styles.certificateWrapper} ref={viewRef} collapsable={false}>
                     <DynamicCertificate
                         projectName={cert.projectName}
                         amount={cert.amount}
-                        mintDate={new Date(cert.mintDate).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' })}
+                        mintDate={cert.mintDate}
                         tokenId={cert.tokenId}
                         purchasingFirm={cert.purchasingFirm}
                     />
@@ -191,17 +189,51 @@ export const CertificateDetailScreen: React.FC = () => {
                     </TouchableOpacity>
                 </View>
 
-            </View>
+            </ScrollView>
 
             {/* Action Bar */}
             <View style={styles.bottomBar}>
-                <TouchableOpacity style={styles.retireBtn} onPress={handleRetire} activeOpacity={0.8}>
-                    <LinearGradient colors={['#ef4444', '#b91c1c']} style={styles.retireGradient}>
+                <Pressable
+                    style={({ pressed }) => [styles.retireBtn, pressed && { opacity: 0.8 }]}
+                    onPress={() => { console.log('[CertDetail] Burn button pressed'); handleRetire(); }}
+                >
+                    <LinearGradient colors={['#ef4444', '#b91c1c']} style={styles.retireGradient} pointerEvents="none">
                         <Ionicons name="flame" size={20} color="#fff" />
                         <Text style={styles.retireBtnText}>Burn & Retire Credits</Text>
                     </LinearGradient>
-                </TouchableOpacity>
+                </Pressable>
             </View>
+
+            {/* Retire Confirmation Modal */}
+            <Modal visible={retireModalVisible} transparent animationType="fade" onRequestClose={() => setRetireModalVisible(false)}>
+                <View style={styles.retireOverlay}>
+                    <View style={styles.retireSheet}>
+                        <Text style={styles.retireEmoji}>🔥</Text>
+                        <Text style={styles.retireTitle}>Retire Carbon Credits?</Text>
+                        <Text style={styles.retireDesc}>
+                            This will permanently burn {cert.amount} CC from "{cert.projectName}" on-chain.{"\n\n"}This action cannot be undone.
+                        </Text>
+                        <Pressable
+                            style={({ pressed }) => [styles.retireConfirmBtn, pressed && { opacity: 0.85 }, retiring && { opacity: 0.5 }]}
+                            onPress={confirmRetire}
+                            disabled={retiring}
+                        >
+                            {retiring
+                                ? <ActivityIndicator size="small" color="#fff" />
+                                : <><Ionicons name="flame" size={18} color="#fff" /><Text style={styles.retireConfirmText}>Confirm Burn & Retire</Text></>
+                            }
+                        </Pressable>
+                        <Pressable
+                            style={({ pressed }) => [styles.retireCancelBtn, pressed && { opacity: 0.8 }]}
+                            onPress={() => setRetireModalVisible(false)}
+                            disabled={retiring}
+                        >
+                            <Text style={styles.retireCancelText}>Cancel</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
+
             <ProtocolInfoModal
                 visible={protocolVisible}
                 onClose={() => setProtocolVisible(false)}
@@ -233,6 +265,8 @@ const styles = StyleSheet.create({
 
     content: {
         flex: 1,
+    },
+    contentInner: {
         padding: 20,
         alignItems: 'center',
     },
@@ -257,6 +291,7 @@ const styles = StyleSheet.create({
     bottomBar: {
         padding: 16, paddingBottom: 32, backgroundColor: colors.card,
         borderTopWidth: 1, borderTopColor: colors.border,
+        zIndex: 10, position: 'relative',
     },
     retireBtn: { borderRadius: 16, overflow: 'hidden' },
     retireGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
@@ -309,4 +344,42 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.blue,
     },
+    retireOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    retireSheet: {
+        backgroundColor: colors.card,
+        borderRadius: 20,
+        padding: 28,
+        width: '85%',
+        maxWidth: 380,
+        alignItems: 'center',
+    },
+    retireEmoji: { fontSize: 48, marginBottom: 12 },
+    retireTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
+    retireDesc: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: 24 },
+    retireConfirmBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#ef4444',
+        borderRadius: 14,
+        paddingVertical: 14,
+        width: '100%',
+        marginBottom: 10,
+    },
+    retireConfirmText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+    retireCancelBtn: {
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 14,
+        paddingVertical: 14,
+        width: '100%',
+        alignItems: 'center',
+    },
+    retireCancelText: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
 });

@@ -28,7 +28,7 @@ export const Header: React.FC = () => {
                     </View>
                     <View>
                         <Text style={styles.appName}>SolCarbon</Text>
-                        <Text style={styles.networkLabel}>Devnet</Text>
+                        {/* <Text style={styles.networkLabel}>Devnet</Text> */}
                     </View>
                 </View>
 
