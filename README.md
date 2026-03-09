@@ -113,24 +113,88 @@ SolCarbon is a **mobile-first, on-chain carbon credit exchange** built on Solana
 India presents a unique and urgent opportunity for on-chain carbon markets:
 
 ### Regulatory Tailwinds
+- **CERC Carbon Credit Trading Regulations (March 2026):** CERC has issued the *CERC (Terms and Conditions for Purchase and Sale of Carbon Credit Certificates) Regulations, 2026*, operationalizing CCC trading on power exchanges. Key provisions: **compliance market** for obligated entities + **offset market** for non-obligated entities, monthly trading sessions, 1 CCC = 1 tCO2e, floor/forbearance price bands, and the Grid Controller of India as the CCC registry. BEE acts as administrator, and market oversight is shared between CERC and BEE. ([Source: Mercom India, Mar 2, 2026](https://www.mercomindia.com/))
+- **Union Budget 2026-27 — Rs 20,000 Crore CCUS Programme:** The government has announced a dedicated **Rs 20,000 crore Carbon Capture, Utilisation, and Storage (CCUS)** support programme that formally integrates farmers into India's carbon market. Farmers can now earn carbon credits through agroforestry, soil improvement, and methane reduction — with trading on CERC-regulated electronic platforms expected by mid-2026. ([Source: The Better India, Feb 2026](https://www.thebetterindia.com/))
 - **SEBI BRSR Framework (2023):** Top-1000 listed companies must now disclose carbon data under Section C, Principle 6. This creates immediate demand for easy-to-use offset and reporting tools.
-- **Carbon Credit Trading Scheme (CCTS) 2023:** India's Bureau of Energy Efficiency is building a national compliance carbon market. Early movers in voluntary market infrastructure will have a massive head start.
+- **Carbon Credit Trading Scheme (CCTS) 2023:** India's Bureau of Energy Efficiency is building a national compliance carbon market under the Indian Carbon Market (ICM). Projects are registered, verified by accredited Carbon Verification Agencies (ACVAs), and issued Triple C certificates recorded in the ICM registry.
 - **India's NDC Commitments:** 50% cumulative electric power from non-fossil sources by 2030, 1 billion tonnes CO2e reduction by 2030 — massive supply of credits incoming.
 
+### CERC CCC Trading Framework (2026)
+
+The CERC regulations create the institutional backbone for India's carbon credit exchange:
+
+```
+┌───────────────┐    issues CCCs     ┌─────────────┐    credited to     ┌──────────────────┐
+│      BEE      │ ─────────────────▶ │  ICM/CCTS   │ ─────────────────▶ │  Grid Controller │
+│ (Administrator)│   after Central   │  Registry    │   registry upon   │  of India        │
+└───────────────┘    Govt approval   └─────────────┘   fee payment      │  (CCC Registry)  │
+                                                                         └────────┬─────────┘
+                                                                                  │
+                                                            placed for dealing    │
+                                                                                  ▼
+┌───────────────────┐    buy/sell    ┌──────────────────┐    transaction    ┌─────────────┐
+│  Obligated Entity │ ◀────────────▶ │ Power Exchanges  │ ──────reports──▶ │   Registry   │
+│ (compliance mkt)  │               │ (CERC-approved)  │                  │ debit/credit │
+├───────────────────┤               │                  │                  └─────────────┘
+│Non-Obligated Entity│ ◀────────────▶│   1 CCC = 1 tCO2e │
+│  (offset market)  │               │  floor ↔ forbear  │
+└───────────────────┘               └──────────────────┘
+```
+
+| Provision | Detail |
+|---|---|
+| **CCC denomination** | 1 CCC = 1 tonne CO2 equivalent (tCO2e) |
+| **Markets** | Compliance market (obligated entities) + Offset market (non-obligated) |
+| **Trading frequency** | Monthly or as CERC specifies |
+| **Registry** | Grid Controller of India |
+| **Administrator** | Bureau of Energy Efficiency (BEE) |
+| **Price discovery** | Market-driven on power exchanges, within floor/forbearance band (compliance) |
+| **Anti-manipulation** | Bids exceeding registry holdings are void; 3+ defaults in a quarter = 6-month trading ban |
+| **Oversight** | CERC + BEE joint market oversight |
+
+> **Why this matters for SolCarbon:** The CERC framework creates the regulatory rails for CCC trading — but power exchanges are centralized, opaque, and inaccessible to retail participants. SolCarbon can serve as the **on-chain bridge** that tokenizes CCCs for transparent, permissionless, mobile-first trading at a fraction of the cost.
+
+### Budget 2026: How Farmers Earn Carbon Credits (11-Step Process)
+
+The Rs 20,000 crore programme creates a structured pipeline for farmers to participate in carbon trading:
+
+| Step | Action | Who Handles It |
+|---|---|---|
+| 1. Join a project | Farmers enroll through an FPO, cooperative, or aggregator | FPO / Aggregator |
+| 2. KYC documentation | Aadhaar, land records, cultivation history, bank details | Farmer |
+| 3. Select carbon activities | Agroforestry, reduced tillage, organic fertilizers, methane reduction (e.g., direct-seeded rice) | Farmer + Aggregator |
+| 4. Develop project plan | Plot details, activity design, monitoring strategy, benefit-sharing agreements | Aggregator |
+| 5. Register under ICM/CCTS | Official registration in India's Carbon Credit Trading Scheme | Aggregator |
+| 6. Record baseline | Soil tests, current practices, land status documentation | Verified third-party |
+| 7. Implement practices | Planting trees, improved farming, no stubble burning | Farmer |
+| 8. Monitor & maintain evidence | Geotagged photos, plantation records, satellite monitoring | Farmer + Remote tools |
+| 9. Third-party verification | Accredited Carbon Verification Agencies (ACVAs) audit the project | ACVAs |
+| 10. Issue Triple C certificates | Carbon credits recorded in the ICM registry | ICM Registry |
+| 11. Trade & receive payment | Credits sold on CERC-regulated electronic platforms | Aggregator / Farmer |
+
+> **SolCarbon's role:** Steps 10-11 are where on-chain infrastructure becomes critical. SolCarbon can tokenize Triple C certificates as SPL tokens on Solana, enabling instant settlement, fractional trading, and transparent price discovery — replacing opaque OTC broker deals with a permissionless mobile marketplace.
+
 ### Market Size
+- **Rs 20,000 crore ($2.4B) government allocation** dedicated to carbon market infrastructure (Budget 2026-27)
 - **1,700+ CDM-registered projects** already generating credits in India (solar, wind, biomass, hydro)
 - **63 million MSMEs** contributing ~30% of GDP — most have no carbon accounting tools and are now facing supply-chain pressure from ESG-conscious MNCs
 - **$50B+ annual climate finance gap** in India — tokenized carbon markets can unlock micro-financing and retail participation
 - **800M+ smartphone users** — mobile-first distribution is the only viable channel
+- **Millions of farmers** newly eligible to earn carbon credits through the Budget 2026 programme via FPOs and aggregators
 
 ### Why India Needs SolCarbon
-Traditional carbon registries (Verra, Gold Standard) are headquartered in Geneva and Washington. Indian project developers pay high listing fees, face 6-12 month issuance delays, and get low prices for credits because they have no direct access to retail buyers. SolCarbon short-circuits this:
+Traditional carbon registries (Verra, Gold Standard) are headquartered in Geneva and Washington. Indian project developers pay high listing fees, face 6-12 month issuance delays, and get low prices for credits because they have no direct access to retail buyers. The Budget 2026 programme creates supply — SolCarbon creates the demand-side marketplace:
 
 ```
   Traditional Path                          SolCarbon Path
   ─────────────────                         ──────────────
   Developer → Registry → Broker → Buyer     Developer → SolCarbon → Buyer
   (6-12 months, $5K+ fees)                  (instant, <$0.001 fee)
+
+  Budget 2026 Farmer Path + SolCarbon
+  ────────────────────────────────────
+  Farmer → FPO → ICM Registry → Triple C Certificate → SolCarbon (tokenize) → Buyer
+  (on-chain settlement, fractional trading, mobile-first)
 ```
 
 ### Projects Currently Listed
